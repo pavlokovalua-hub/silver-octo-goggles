@@ -783,21 +783,26 @@ function App() {
         )}
         <div className="controls-panel">
           <div className="color-buttons">
-            <button className={`color-btn color-btn-foundation ${activeColorPicker === 'foundation' ? 'active' : ''}`} onClick={() => setActiveColorPicker(activeColorPicker === 'foundation' ? null : 'foundation')}>
-              <span className="color-dot" style={{ backgroundColor: foundationColor }} /><span>Тональний</span>
-            </button>
-            <button className={`color-btn color-btn-blush ${activeColorPicker === 'blush' ? 'active' : ''}`} onClick={() => setActiveColorPicker(activeColorPicker === 'blush' ? null : 'blush')}>
-              <span className="color-dot" style={{ backgroundColor: blushColor }} /><span>Рум'яна</span>
-            </button>
-            <button className={`color-btn color-btn-lip ${activeColorPicker === 'lip' ? 'active' : ''}`} onClick={() => setActiveColorPicker(activeColorPicker === 'lip' ? null : 'lip')}>
-              <span className="color-dot" style={{ backgroundColor: lipColor }} /><span>Помада</span>
-            </button>
-            <button className={`color-btn color-btn-liner ${activeColorPicker === 'lipLiner' ? 'active' : ''}`} onClick={() => setActiveColorPicker(activeColorPicker === 'lipLiner' ? null : 'lipLiner')}>
-              <span className="color-dot" style={{ backgroundColor: lipLinerColor }} /><span>Контур</span>
-            </button>
-            <button className={`color-btn color-btn-gloss ${activeColorPicker === 'gloss' ? 'active' : ''}`} onClick={() => setActiveColorPicker(activeColorPicker === 'gloss' ? null : 'gloss')}>
-              <span className="color-dot" style={{ backgroundColor: lipGlossColor }} /><span>Блиск</span>
-            </button>
+            <div className="color-btn-wrapper">
+              <button className={`color-btn color-btn-foundation ${activeColorPicker === 'foundation' ? 'active' : ''}`} style={{ border: `5px solid ${foundationColor}` }} onClick={() => setActiveColorPicker(activeColorPicker === 'foundation' ? null : 'foundation')}>
+              </button>
+              <span className="color-btn-label">Foundation</span>
+            </div>
+            <div className="color-btn-wrapper">
+              <button className={`color-btn color-btn-blush ${activeColorPicker === 'blush' ? 'active' : ''}`} style={{ border: `5px solid ${blushColor}` }} onClick={() => setActiveColorPicker(activeColorPicker === 'blush' ? null : 'blush')}>
+              </button>
+              <span className="color-btn-label">Blush</span>
+            </div>
+            <div className="color-btn-wrapper">
+              <button className={`color-btn color-btn-lip ${activeColorPicker === 'lip' ? 'active' : ''}`} style={{ border: `5px solid ${lipColor}` }} onClick={() => setActiveColorPicker(activeColorPicker === 'lip' ? null : 'lip')}>
+              </button>
+              <span className="color-btn-label">Lipstick</span>
+            </div>
+            <div className="color-btn-wrapper">
+              <button className={`color-btn color-btn-liner ${activeColorPicker === 'lipLiner' ? 'active' : ''}`} style={{ border: `5px solid ${lipLinerColor}` }} onClick={() => setActiveColorPicker(activeColorPicker === 'lipLiner' ? null : 'lipLiner')}>
+              </button>
+              <span className="color-btn-label">Liner</span>
+            </div>
           </div>
         </div>
         {colorPickerOverlay}
