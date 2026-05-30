@@ -183,6 +183,7 @@ function App() {
     showLipLiner: true,
     skinSmooth: true,
     skinSmoothStrength: 0.28,
+    eyeBrightness: 0.05,
   });
 
   const [foundationColor, setFoundationColor] = useState(latestMakeupState.current.foundationColor);
@@ -200,6 +201,7 @@ function App() {
   const [showLipLiner, setShowLipLiner] = useState(latestMakeupState.current.showLipLiner);
   const [skinSmooth, setSkinSmooth] = useState(latestMakeupState.current.skinSmooth);
   const [skinSmoothStrength, setSkinSmoothStrength] = useState(latestMakeupState.current.skinSmoothStrength);
+  const [eyeBrightness, setEyeBrightness] = useState(latestMakeupState.current.eyeBrightness);
   const [cameraSupported, setCameraSupported] = useState(true);
   const [lowLightWarning, setLowLightWarning] = useState(false);
   const frameCounterRef = useRef(0);
@@ -246,13 +248,13 @@ function App() {
       foundationColor, opacity, matte,
       lipColor, blushColor, lipGlossColor, lipGlossOpacity, lipLinerColor,
       showFoundation, showBlush, showLip, showGloss, showLipLiner,
-      skinSmooth, skinSmoothStrength,
+      skinSmooth, skinSmoothStrength, eyeBrightness,
     };
   }, [
     foundationColor, opacity, matte,
     lipColor, blushColor, lipGlossColor, lipGlossOpacity, lipLinerColor,
     showFoundation, showBlush, showLip, showGloss, showLipLiner,
-    skinSmooth, skinSmoothStrength,
+    skinSmooth, skinSmoothStrength, eyeBrightness,
   ]);
 
   function detectExcessiveShadows(videoEl, landmarks, w, h) {
@@ -336,6 +338,7 @@ function App() {
       blushColor, showBlush,
       lipGlossColor, lipGlossOpacity, showGloss,
       lipLinerColor, showLipLiner,
+      eyeBrightness,
     } = state;
     const rgbFoundation = hexToRgb(foundationColor);
     if (!rgbFoundation && showFoundation) return;
@@ -545,6 +548,22 @@ function App() {
         ctx.restore();
       }
     }
+
+    // ============================================================
+    // EYE BRIGHTNESS (білок очей — легке сяйво)
+    // ============================================================
+    if (eyeBrightness > 0) {
+      ctx.save();
+      ctx.globalCompositeOperation = 'screen';
+      ctx.fillStyle = `rgba(255,255,255,${Math.min(1, eyeBrightness)})`;
+      ctx.filter = 'blur(3px)';
+      fillPath(ctx, landmarks, LEFT_EYE, fw, fh);
+      ctx.fill();
+      fillPath(ctx, landmarks, RIGHT_EYE, fw, fh);
+      ctx.fill();
+      ctx.filter = 'none';
+      ctx.restore();
+    }
   }
 
   const takeScreenshot = () => {
@@ -622,6 +641,11 @@ function App() {
         <label className="block text-sm font-medium text-gray-300 mb-2">Smoothing Strength: {Math.round(skinSmoothStrength * 100)}%</label>
         <input type="range" min="0" max="1" step="0.01" value={skinSmoothStrength} onChange={(e) => setSkinSmoothStrength(parseFloat(e.target.value))} className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer range-lg" />
         <p className="text-xs text-gray-400 mt-1">0% = off | 100% = maximum airbrush effect</p>
+      </div>
+      <div className="control-group">
+        <label className="block text-sm font-medium text-gray-300 mb-2">Eye Brightness: {Math.round(eyeBrightness * 100)}%</label>
+        <input type="range" min="0" max="1" step="0.01" value={eyeBrightness} onChange={(e) => setEyeBrightness(parseFloat(e.target.value))} className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer range-lg" />
+        <p className="text-xs text-gray-400 mt-1">Освітлює білок очей для більш сяючого вигляду</p>
       </div>
       <div className="control-group">
         <label className="block text-sm font-medium text-gray-300 mb-2">Lip Liner Color</label>
