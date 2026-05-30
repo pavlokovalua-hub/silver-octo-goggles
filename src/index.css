@@ -394,6 +394,121 @@ video, canvas {
   }
 }
 
+/* ===== FOUNDATION TONES PANEL ===== */
+.foundation-tones-overlay {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  top: 0;
+  background: rgba(0,0,0,0.4);
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  animation: fadeIn 0.2s ease;
+}
+
+.foundation-tones-sheet {
+  background: #1f2937;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+  padding: 16px 16px 24px;
+  height: 50vh;
+  overflow-y: auto;
+  animation: slideUp 0.3s ease;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.4);
+}
+
+.foundation-tones-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #374151;
+}
+
+.foundation-tones-header h3 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #f9a8d4;
+  margin: 0;
+}
+
+.foundation-tones-close {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #374151;
+  border: none;
+  color: #d1d5db;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.foundation-tones-close:active {
+  background: #4b5563;
+}
+
+.foundation-tones-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 8px;
+  padding-bottom: 16px;
+}
+
+.foundation-tone-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  padding: 4px 0;
+  border-radius: 8px;
+  transition: background-color 0.15s ease;
+}
+
+.foundation-tone-btn:active {
+  background: rgba(255,255,255,0.1);
+}
+
+.foundation-tone-btn.selected {
+  background: rgba(236,72,153,0.2);
+}
+
+.foundation-tone-circle {
+  width: 27px;
+  height: 27px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.2);
+  flex-shrink: 0;
+  transition: border-color 0.15s ease;
+}
+
+.foundation-tone-btn.selected .foundation-tone-circle {
+  border-color: #ec4899;
+  box-shadow: 0 0 8px rgba(236,72,153,0.5);
+}
+
+.foundation-tone-number {
+  font-size: 10px;
+  font-weight: 500;
+  color: #9ca3af;
+  line-height: 1;
+}
+
+.foundation-tone-btn.selected .foundation-tone-number {
+  color: #ec4899;
+}
+
 /* ===== SHADOW WARNING ===== */
 .shadow-warning {
   display: flex;

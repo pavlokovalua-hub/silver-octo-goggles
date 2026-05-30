@@ -2,28 +2,187 @@ import React, { useEffect, useRef, useState } from 'react';
 import { FaceMesh } from '@mediapipe/face_mesh';
 import * as cam from '@mediapipe/camera_utils';
 import { applySkinSmoothing } from './skinSmoothing';
+import foundationsData from './datasets/foundations.json';
 
 const FOREHEAD_EXTEND_EYEBROW_OFFSET = 0.01;
 
+// ─────── Модульні константи (лендмарки) ───────
+const FACE_OVAL = [
+  10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288,
+  397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136,
+  172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109,
+];
+const LIPS_UPPER_OUTER = [61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291, 308, 415, 310, 311, 312, 13, 82, 81, 80, 191, 78];
+const LIPS_LOWER_OUTER = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 308, 324, 318, 402, 317, 14, 87, 178, 88, 95, 78];
+const LIPS_UPPER_BORDER_OUTER = [61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291, 409, 270, 269, 267, 0, 37, 39, 40, 185, 61];
+const LIPS_LOWER_BORDER_OUTER = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 375, 321, 405, 314, 17, 84, 181, 91, 146, 61];
+const LEFT_EYE = [33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246];
+const RIGHT_EYE = [263, 249, 390, 373, 374, 380, 381, 382, 362, 398, 384, 385, 386, 387, 388, 466];
+const LEFT_EYEBROW = [70, 63, 105, 66, 107, 55, 65, 52, 53, 46];
+const RIGHT_EYEBROW = [336, 296, 334, 293, 300, 285, 295, 282, 283, 276];
+const BLUSH_LEFT = [116, 117, 118, 119, 120, 121, 128, 50, 205, 49, 110, 203, 204];
+const BLUSH_RIGHT = [345, 346, 347, 348, 349, 350, 357, 280, 425, 279, 339, 423, 424];
+const LEFT_IRIS = [468, 469, 470, 471, 472];
+const RIGHT_IRIS = [473, 474, 475, 476, 477];
+// Внутрішній контур рота (простір між губами — зуби, порожнина рота)
+const MOUTH_INTERIOR = [78, 191, 80, 81, 82, 13, 312, 311, 310, 415, 308, 324, 318, 402, 317, 14, 87, 178, 88, 95, 78];
+const ALL_BROWS = [...LEFT_EYEBROW, ...RIGHT_EYEBROW];
+// Вирізається ТІЛЬКИ: очі (щоб не фарбувались) і внутрішня частина рота (зуби/порожнина).
+// Брови та губи мають бути в тоні шкіри.
+const CUTOUT_GROUPS = [
+  LEFT_EYE, RIGHT_EYE,
+  LEFT_IRIS, RIGHT_IRIS,
+  MOUTH_INTERIOR,
+];
+
+// ─────── RGB-парсинг ───────
+function rgbStrToHex(rgbStr) {
+  const match = rgbStr.match(/rgb\s*\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\)/);
+  if (!match) return '#000000';
+  const r = parseInt(match[1]);
+  const g = parseInt(match[2]);
+  const b = parseInt(match[3]);
+  return '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0')).join('');
+}
+
+function getLastDigits(sku) {
+  return sku.slice(-3);
+}
+
+// Підготовлені дані тонів
+const foundationTones = foundationsData.map(item => {
+  const hex = rgbStrToHex(item.background);
+  const number = getLastDigits(item.sku);
+  return { sku: item.sku, hex, number };
+});
+
+// ─────── hex → RGB з кешем ───────
+const _hexRgbCache = new Map();
+function hexToRgb(hex) {
+  const cached = _hexRgbCache.get(hex);
+  if (cached) return cached;
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result) return null;
+  const rgb = {
+    r: parseInt(result[1], 16),
+    g: parseInt(result[2], 16),
+    b: parseInt(result[3], 16),
+  };
+  if (_hexRgbCache.size > 100) _hexRgbCache.clear();
+  _hexRgbCache.set(hex, rgb);
+  return rgb;
+}
+
+// ─────── Canvas-допоміжні функції ───────
+function fillPath(ctx, landmarks, indices, fw, fh) {
+  if (indices.length === 0) return;
+  ctx.beginPath();
+  ctx.moveTo(landmarks[indices[0]].x * fw, landmarks[indices[0]].y * fh);
+  for (let i = 1; i < indices.length; i++) {
+    const pt = landmarks[indices[i]];
+    if (pt) ctx.lineTo(pt.x * fw, pt.y * fh);
+  }
+  ctx.closePath();
+}
+
+function fillPathDirect(ctx, landmarks, indices, sw, sh) {
+  ctx.beginPath();
+  ctx.moveTo(landmarks[indices[0]].x * sw, landmarks[indices[0]].y * sh);
+  for (let i = 1; i < indices.length; i++) {
+    ctx.lineTo(landmarks[indices[i]].x * sw, landmarks[indices[i]].y * sh);
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+
+function strokePath(ctx, landmarks, indices, fw, fh) {
+  if (indices.length < 2) return;
+  ctx.beginPath();
+  ctx.moveTo(landmarks[indices[0]].x * fw, landmarks[indices[0]].y * fh);
+  for (let i = 1; i < indices.length; i++) {
+    const pt = landmarks[indices[i]];
+    if (pt) ctx.lineTo(pt.x * fw, pt.y * fh);
+  }
+  const first = landmarks[indices[0]];
+  if (first) ctx.lineTo(first.x * fw, first.y * fh);
+}
+
+function computeFaceBounds(landmarks) {
+  let minX = 1, maxX = 0;
+  let ovalMinY = 1, ovalMaxY = 0;
+  let eyebrowTopY = 1;
+  for (const idx of FACE_OVAL) {
+    const pt = landmarks[idx];
+    if (pt) {
+      if (pt.x < minX) minX = pt.x;
+      if (pt.x > maxX) maxX = pt.x;
+      if (pt.y < ovalMinY) ovalMinY = pt.y;
+      if (pt.y > ovalMaxY) ovalMaxY = pt.y;
+    }
+  }
+  for (const idx of ALL_BROWS) {
+    const pt = landmarks[idx];
+    if (pt && pt.y < eyebrowTopY) eyebrowTopY = pt.y;
+  }
+  return { minX, maxX, ovalMinY, ovalMaxY, eyebrowTopY };
+}
+
+function ensureLayerCanvas(ref, w, h) {
+  if (!ref.current || ref.current.width !== w || ref.current.height !== h) {
+    const c = document.createElement('canvas');
+    c.width = w;
+    c.height = h;
+    ref.current = c;
+  }
+  return ref.current.getContext('2d');
+}
+
+// Вирізає очі та внутрішню частину рота (зуби/порожнину) з шару тональника.
+// Брови та губи НЕ вирізаються — вони мають бути в тоні шкіри.
+function punchOutEyesMouth(ctx, landmarks, fw, fh) {
+  ctx.save();
+  ctx.globalCompositeOperation = 'destination-out';
+  ctx.fillStyle = 'rgba(0,0,0,1)';
+  ctx.strokeStyle = 'rgba(0,0,0,1)';
+  ctx.lineWidth = 6;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+
+  for (const group of CUTOUT_GROUPS) {
+    if (group.length < 2) continue;
+    ctx.beginPath();
+    ctx.moveTo(landmarks[group[0]].x * fw, landmarks[group[0]].y * fh);
+    for (let i = 1; i < group.length; i++) {
+      const pt = landmarks[group[i]];
+      if (pt) ctx.lineTo(pt.x * fw, pt.y * fh);
+    }
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+// ────────── Основний компонент ──────────
 function App() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const latestMakeupState = useRef({
     foundationColor: '#f3cfb3',
-    opacity: 0.5,
-    matte: 0.2,
+    opacity: 0.31,
+    matte: 0.09,
     lipColor: '#BD2846',
     blushColor: '#f3bebe',
-    lipGlossColor: '#ffffff',
+    lipGlossColor: '#310606',
     lipGlossOpacity: 0.19,
-    lipLinerColor: '#8B0000',
+    lipLinerColor: '#390404',
     showFoundation: true,
     showBlush: true,
     showLip: true,
     showGloss: true,
     showLipLiner: true,
     skinSmooth: true,
-    skinSmoothStrength: 0.27,
+    skinSmoothStrength: 0.28,
   });
 
   const [foundationColor, setFoundationColor] = useState(latestMakeupState.current.foundationColor);
@@ -44,6 +203,9 @@ function App() {
   const [cameraSupported, setCameraSupported] = useState(true);
   const [lowLightWarning, setLowLightWarning] = useState(false);
   const frameCounterRef = useRef(0);
+  const latestLandmarksRef = useRef(null);
+  const layerCanvasRef = useRef(null);
+  const matteCanvasRef = useRef(null);
 
   useEffect(() => {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -51,25 +213,19 @@ function App() {
       return;
     }
     const faceMesh = new FaceMesh({
-      locateFile: (file) => {
-        return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
-      },
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
     });
-
     faceMesh.setOptions({
       maxNumFaces: 1,
       refineLandmarks: true,
       minDetectionConfidence: 0.5,
       minTrackingConfidence: 0.5,
     });
-
     faceMesh.onResults(onResults);
 
-    if (typeof videoRef.current !== "undefined" && videoRef.current !== null) {
+    if (videoRef.current) {
       const camera = new cam.Camera(videoRef.current, {
-        onFrame: async () => {
-          await faceMesh.send({ image: videoRef.current });
-        },
+        onFrame: async () => { await faceMesh.send({ image: videoRef.current }); },
         width: 640,
         height: 480,
       });
@@ -82,85 +238,39 @@ function App() {
         }
       });
     }
-
     return () => {};
   }, []);
 
   useEffect(() => {
     latestMakeupState.current = {
-      foundationColor,
-      opacity,
-      matte,
-      lipColor,
-      blushColor,
-      lipGlossColor,
-      lipGlossOpacity,
-      lipLinerColor,
-      showFoundation,
-      showBlush,
-      showLip,
-      showGloss,
-      showLipLiner,
-      skinSmooth,
-      skinSmoothStrength,
+      foundationColor, opacity, matte,
+      lipColor, blushColor, lipGlossColor, lipGlossOpacity, lipLinerColor,
+      showFoundation, showBlush, showLip, showGloss, showLipLiner,
+      skinSmooth, skinSmoothStrength,
     };
-  }, [foundationColor, opacity, matte, lipColor, blushColor, lipGlossColor, lipGlossOpacity, lipLinerColor, showFoundation, showBlush, showLip, showGloss, showLipLiner, skinSmooth, skinSmoothStrength]);
-
-  const latestLandmarksRef = useRef(null);
-
-  function hexToRgb(hex) {
-    const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return result ? {
-      r: parseInt(result[1], 16),
-      g: parseInt(result[2], 16),
-      b: parseInt(result[3], 16)
-    } : null;
-  }
+  }, [
+    foundationColor, opacity, matte,
+    lipColor, blushColor, lipGlossColor, lipGlossOpacity, lipLinerColor,
+    showFoundation, showBlush, showLip, showGloss, showLipLiner,
+    skinSmooth, skinSmoothStrength,
+  ]);
 
   function detectExcessiveShadows(videoEl, landmarks, w, h) {
-    const FACE_OVAL = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109];
-
     const sw = Math.round(w / 4);
     const sh = Math.round(h / 4);
-
     const frameCanvas = document.createElement('canvas');
-    frameCanvas.width = sw;
-    frameCanvas.height = sh;
+    frameCanvas.width = sw; frameCanvas.height = sh;
     const frameCtx = frameCanvas.getContext('2d');
     frameCtx.drawImage(videoEl, 0, 0, sw, sh);
-
     const maskCanvas = document.createElement('canvas');
-    maskCanvas.width = sw;
-    maskCanvas.height = sh;
+    maskCanvas.width = sw; maskCanvas.height = sh;
     const maskCtx = maskCanvas.getContext('2d');
     maskCtx.fillStyle = '#000000';
     maskCtx.fillRect(0, 0, sw, sh);
-
     maskCtx.fillStyle = '#ffffff';
-    maskCtx.beginPath();
-    maskCtx.moveTo(landmarks[FACE_OVAL[0]].x * sw, landmarks[FACE_OVAL[0]].y * sh);
-    for (let i = 1; i < FACE_OVAL.length; i++) {
-      maskCtx.lineTo(landmarks[FACE_OVAL[i]].x * sw, landmarks[FACE_OVAL[i]].y * sh);
-    }
-    maskCtx.closePath();
-    maskCtx.fill();
-
+    fillPathDirect(maskCtx, landmarks, FACE_OVAL, sw, sh);
+    const { eyebrowTopY, minX, maxX } = computeFaceBounds(landmarks);
     const topCenter = landmarks[10];
-    const LEFT_BROW = [70, 63, 105, 66, 107, 55, 65, 52, 53, 46];
-    const RIGHT_BROW = [336, 296, 334, 293, 300, 285, 295, 282, 283, 276];
-    let eyebrowTopY = 1;
-    for (const idx of [...LEFT_BROW, ...RIGHT_BROW]) {
-      const pt = landmarks[idx];
-      if (pt && pt.y < eyebrowTopY) eyebrowTopY = pt.y;
-    }
-    let minX = 1, maxX = 0;
-    for (const idx of FACE_OVAL) {
-      const pt = landmarks[idx];
-      if (pt) {
-        if (pt.x < minX) minX = pt.x;
-        if (pt.x > maxX) maxX = pt.x;
-      }
-    }
     if (topCenter && minX < 1 && maxX > 0 && eyebrowTopY < 1) {
       const faceWidth = maxX - minX;
       const extendRatio = 0.18;
@@ -168,7 +278,6 @@ function App() {
       const rightX = Math.min(1, (maxX + faceWidth * extendRatio)) * sh;
       const bottomY = Math.max(0, eyebrowTopY * sh - FOREHEAD_EXTEND_EYEBROW_OFFSET * sh);
       const topY = Math.max(0, topCenter.y * sh - sh * 0.06);
-
       maskCtx.fillStyle = '#ffffff';
       maskCtx.beginPath();
       maskCtx.moveTo(leftX, bottomY);
@@ -178,218 +287,103 @@ function App() {
       maskCtx.closePath();
       maskCtx.fill();
     }
-
     const frameData = frameCtx.getImageData(0, 0, sw, sh).data;
     const maskData = maskCtx.getImageData(0, 0, sw, sh).data;
     const n = sw * sh;
-
-    let totalPixels = 0;
-    let darkPixels = 0;
-
-    const LUMINANCE_THRESHOLD = 100;
-    const DARK_RATIO_THRESHOLD = 0.30;
-
+    let totalPixels = 0, darkPixels = 0;
+    const LUMINANCE_THRESHOLD = 100, DARK_RATIO_THRESHOLD = 0.3;
     for (let i = 0; i < n; i++) {
       const idx = i * 4;
       if (maskData[idx + 3] > 128) {
         totalPixels++;
-        const r = frameData[idx];
-        const g = frameData[idx + 1];
-        const b = frameData[idx + 2];
-        const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
-        if (luminance < LUMINANCE_THRESHOLD) {
-          darkPixels++;
-        }
+        const luminance = 0.299 * frameData[idx] + 0.587 * frameData[idx + 1] + 0.114 * frameData[idx + 2];
+        if (luminance < LUMINANCE_THRESHOLD) darkPixels++;
       }
     }
-
     if (totalPixels === 0) return false;
     return (darkPixels / totalPixels) > DARK_RATIO_THRESHOLD;
   }
 
-
   function onResults(results) {
-    const { foundationColor, opacity, matte, lipColor, blushColor, lipGlossColor, lipGlossOpacity, lipLinerColor, showFoundation, showBlush, showLip, showGloss, showLipLiner, skinSmooth, skinSmoothStrength } = latestMakeupState.current;
+    const state = latestMakeupState.current;
     const canvasCtx = canvasRef.current.getContext('2d');
     const width = canvasRef.current.width;
     const height = canvasRef.current.height;
-
     canvasCtx.save();
     canvasCtx.clearRect(0, 0, width, height);
-
     canvasCtx.drawImage(videoRef.current, 0, 0, width, height);
-
     if (results.multiFaceLandmarks) {
       for (const landmarks of results.multiFaceLandmarks) {
         latestLandmarksRef.current = landmarks;
-
-        drawMakeup(canvasCtx, landmarks, {
-          foundationColor, opacity, matte, showFoundation,
-          lipColor, showLip,
-          blushColor, showBlush,
-          lipGlossColor, lipGlossOpacity, showGloss,
-          lipLinerColor, showLipLiner,
-        });
+        drawMakeup(canvasCtx, landmarks, state, width, height);
       }
     }
-
     frameCounterRef.current++;
     if (frameCounterRef.current % 15 === 0 && latestLandmarksRef.current && videoRef.current) {
-      const hasExcessiveShadows = detectExcessiveShadows(videoRef.current, latestLandmarksRef.current, width, height);
-      setLowLightWarning(hasExcessiveShadows);
+      setLowLightWarning(detectExcessiveShadows(videoRef.current, latestLandmarksRef.current, width, height));
     }
-
-    const landmarks = latestLandmarksRef.current;
-    if (skinSmooth && landmarks && skinSmoothStrength > 0) {
-      applySkinSmoothing(canvasCtx, landmarks, width, height, skinSmoothStrength);
+    const lm = latestLandmarksRef.current;
+    if (state.skinSmooth && lm && state.skinSmoothStrength > 0) {
+      applySkinSmoothing(canvasCtx, lm, width, height, state.skinSmoothStrength);
     }
-
     canvasCtx.restore();
   }
 
-
-  function drawMakeup(ctx, landmarks, opts) {
+  function drawMakeup(ctx, landmarks, state, fw, fh) {
     const {
       foundationColor, opacity, matte, showFoundation,
       lipColor, showLip,
       blushColor, showBlush,
       lipGlossColor, lipGlossOpacity, showGloss,
       lipLinerColor, showLipLiner,
-    } = opts;
-
+    } = state;
     const rgbFoundation = hexToRgb(foundationColor);
-    const rgbLip = hexToRgb(lipColor);
-    const rgbBlush = hexToRgb(blushColor);
-    const rgbGloss = hexToRgb(lipGlossColor);
-    const rgbLipLiner = hexToRgb(lipLinerColor);
-
+    if (!rgbFoundation && showFoundation) return;
+    const rgbLip = showLip ? hexToRgb(lipColor) : null;
+    const rgbBlush = showBlush ? hexToRgb(blushColor) : null;
+    const rgbGloss = showGloss ? hexToRgb(lipGlossColor) : null;
+    const rgbLipLiner = showLipLiner ? hexToRgb(lipLinerColor) : null;
     const alphaFoundation = Math.max(0, Math.min(1, opacity));
     const alphaMatte = Math.max(0, Math.min(1, matte));
-    const alphaGloss = Math.max(0, Math.min(1, lipGlossOpacity));
-
-    if (!rgbFoundation) {
-      return;
-    }
-
-    const FACE_OVAL = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288, 397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136, 172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109];
-    const LIPS_UPPER_OUTER = [61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291, 308, 415, 310, 311, 312, 13, 82, 81, 80, 191, 78];
-    const LIPS_LOWER_OUTER = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 308, 324, 318, 402, 317, 14, 87, 178, 88, 95, 78];
-    const LIPS_UPPER_BORDER_OUTER = [61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291, 409, 270, 269,267, 0, 37, 39, 40, 185, 61];
-    const LIPS_LOWER_BORDER_OUTER = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 375, 321, 405, 314, 17, 84, 181, 91, 146, 61];
-    const LEFT_EYE = [33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246];
-    const RIGHT_EYE = [263, 249, 390, 373, 374, 380, 381, 382, 362, 398, 384, 385, 386, 387, 388, 466];
-    const LEFT_EYEBROW = [70, 63, 105, 66, 107, 55, 65, 52, 53, 46];
-    const RIGHT_EYEBROW = [336, 296, 334, 293, 300, 285, 295, 282, 283, 276];
-    const BLUSH_LEFT = [116, 117, 118, 119, 120, 121, 128, 50, 205, 49, 110, 203, 204];
-    const BLUSH_RIGHT = [345, 346, 347, 348, 349, 350, 357, 280, 425, 279, 339, 423, 424];
-
-    const createPath = (indices, startNew = true) => {
-      if (indices.length === 0) return;
-      if (startNew) {
-        ctx.beginPath();
-      }
-      ctx.moveTo(landmarks[indices[0]].x * ctx.canvas.width, landmarks[indices[0]].y * ctx.canvas.height);
-      for (let i = 1; i < indices.length; i++) {
-        const point = landmarks[indices[i]];
-        if (point) {
-          ctx.lineTo(point.x * ctx.canvas.width, point.y * ctx.canvas.height);
-        }
-      }
-      ctx.closePath();
-    };
-
-    const createStrokePath = (indices) => {
-      if (indices.length < 2) return;
-      ctx.beginPath();
-      ctx.moveTo(landmarks[indices[0]].x * ctx.canvas.width, landmarks[indices[0]].y * ctx.canvas.height);
-      for (let i = 1; i < indices.length; i++) {
-        const point = landmarks[indices[i]];
-        if (point) {
-          ctx.lineTo(point.x * ctx.canvas.width, point.y * ctx.canvas.height);
-        }
-      }
-      // Close back to first point to complete the outline
-      const firstPoint = landmarks[indices[0]];
-      if (firstPoint) {
-        ctx.lineTo(firstPoint.x * ctx.canvas.width, firstPoint.y * ctx.canvas.height);
-      }
-    };
-
-    const fw = ctx.canvas.width;
-    const fh = ctx.canvas.height;
 
     // ============================================================
     // FOUNDATION LAYER
     // ============================================================
-    if (showFoundation) {
-      const layerCanvas = document.createElement('canvas');
-      layerCanvas.width = fw;
-      layerCanvas.height = fh;
-      const layerCtx = layerCanvas.getContext('2d');
+    if (showFoundation && rgbFoundation) {
+      const { ovalMinY, ovalMaxY, eyebrowTopY, minX, maxX } = computeFaceBounds(landmarks);
+      const topCenter = landmarks[10];
 
-      layerCtx.filter = 'blur(8px)';
-      layerCtx.globalCompositeOperation = 'source-over';
-
-      let ovalMinY = 1, ovalMaxY = 0;
-      for (const idx of FACE_OVAL) {
-        const pt = landmarks[idx];
-        if (pt) {
-          if (pt.y < ovalMinY) ovalMinY = pt.y;
-          if (pt.y > ovalMaxY) ovalMaxY = pt.y;
-        }
-      }
-      if (ovalMinY < 1 && ovalMaxY > 0) {
-        const ovalGrad = layerCtx.createLinearGradient(0, ovalMinY * fh, 0, ovalMaxY * fh);
-        ovalGrad.addColorStop(0, `rgba(${rgbFoundation.r}, ${rgbFoundation.g}, ${rgbFoundation.b}, ${alphaFoundation * 0.1})`);
-        ovalGrad.addColorStop(0.1, `rgba(${rgbFoundation.r}, ${rgbFoundation.g}, ${rgbFoundation.b}, ${alphaFoundation * 0.3})`);
-        ovalGrad.addColorStop(1, `rgba(${rgbFoundation.r}, ${rgbFoundation.g}, ${rgbFoundation.b}, ${alphaFoundation})`);
-        layerCtx.fillStyle = ovalGrad;
-      } else {
-        layerCtx.fillStyle = `rgba(${rgbFoundation.r}, ${rgbFoundation.g}, ${rgbFoundation.b}, ${alphaFoundation})`;
-      }
-      (function drawOval() {
-        layerCtx.beginPath();
-        layerCtx.moveTo(landmarks[FACE_OVAL[0]].x * fw, landmarks[FACE_OVAL[0]].y * fh);
-        for (let i = 1; i < FACE_OVAL.length; i++) {
-          layerCtx.lineTo(landmarks[FACE_OVAL[i]].x * fw, landmarks[FACE_OVAL[i]].y * fh);
-        }
-        layerCtx.closePath();
-        layerCtx.fill();
-      })();
+      // 1. Draw foundation on layerCanvas
+      const layerCtx = ensureLayerCanvas(layerCanvasRef, fw, fh);
+      layerCtx.clearRect(0, 0, fw, fh);
       layerCtx.filter = 'none';
 
-      const topCenter = landmarks[10];
-      const LEFT_BROW = [70, 63, 105, 66, 107, 55, 65, 52, 53, 46];
-      const RIGHT_BROW = [336, 296, 334, 293, 300, 285, 295, 282, 283, 276];
-      let eyebrowTopY = 1;
-      for (const idx of [...LEFT_BROW, ...RIGHT_BROW]) {
-        const pt = landmarks[idx];
-        if (pt && pt.y < eyebrowTopY) eyebrowTopY = pt.y;
+      const solidAlpha = Math.min(1, alphaFoundation * 0.65);
+      if (ovalMinY < 1 && ovalMaxY > 0) {
+        const grad = layerCtx.createLinearGradient(0, ovalMinY * fh, 0, ovalMaxY * fh);
+        grad.addColorStop(0, `rgba(${rgbFoundation.r},${rgbFoundation.g},${rgbFoundation.b},${solidAlpha * 0.1})`);
+        grad.addColorStop(0.1, `rgba(${rgbFoundation.r},${rgbFoundation.g},${rgbFoundation.b},${solidAlpha * 0.8})`);
+        grad.addColorStop(1, `rgba(${rgbFoundation.r},${rgbFoundation.g},${rgbFoundation.b},${solidAlpha})`);
+        layerCtx.fillStyle = grad;
+      } else {
+        layerCtx.fillStyle = `rgba(${rgbFoundation.r},${rgbFoundation.g},${rgbFoundation.b},${solidAlpha})`;
       }
-      let minX = 1, maxX = 0;
-      for (const idx of FACE_OVAL) {
-        const pt = landmarks[idx];
-        if (pt) {
-          if (pt.x < minX) minX = pt.x;
-          if (pt.x > maxX) maxX = pt.x;
-        }
-      }
+      fillPath(layerCtx, landmarks, FACE_OVAL, fw, fh);
+      layerCtx.fill();
+
+      // Forehead extension
       if (topCenter && minX < 1 && maxX > 0 && eyebrowTopY < 1) {
         const faceWidth = maxX - minX;
         const extendRatio = 0.18;
-        const leftX = Math.max(0, (minX - faceWidth * extendRatio)) * fw;
-        const rightX = Math.min(1, (maxX + faceWidth * extendRatio)) * fw;
-
+        const leftX = Math.max(0, (minX - faceWidth * extendRatio)) * fw + 57;
+        const rightX = Math.min(1, (maxX + faceWidth * extendRatio)) * fw - 57;
         const bottomY = Math.max(0, eyebrowTopY * fh - FOREHEAD_EXTEND_EYEBROW_OFFSET * fh);
         const topY = Math.max(0, topCenter.y * fh - fh * 0.06);
-
-        layerCtx.filter = 'blur(6px)';
-        layerCtx.globalCompositeOperation = 'source-over';
-        const foreheadAlpha = Math.min(1, alphaFoundation * 1.35);
+        const foreheadAlpha = Math.min(1, solidAlpha * 1.35);
         const grad = layerCtx.createLinearGradient(0, bottomY, 0, topY);
-        grad.addColorStop(0, `rgba(${rgbFoundation.r}, ${rgbFoundation.g}, ${rgbFoundation.b}, 0)`);
-        grad.addColorStop(0.5, `rgba(${rgbFoundation.r}, ${rgbFoundation.g}, ${rgbFoundation.b}, ${foreheadAlpha * 0.5})`);
-        grad.addColorStop(1, `rgba(${rgbFoundation.r}, ${rgbFoundation.g}, ${rgbFoundation.b}, ${foreheadAlpha})`);
+        grad.addColorStop(0, `rgba(${rgbFoundation.r},${rgbFoundation.g},${rgbFoundation.b},${foreheadAlpha * 0.1})`);
+        grad.addColorStop(0.5, `rgba(${rgbFoundation.r},${rgbFoundation.g},${rgbFoundation.b},${foreheadAlpha * 0.5})`);
+        grad.addColorStop(1, `rgba(${rgbFoundation.r},${rgbFoundation.g},${rgbFoundation.b},${foreheadAlpha * 0.1})`);
         layerCtx.fillStyle = grad;
         layerCtx.beginPath();
         layerCtx.moveTo(leftX, bottomY);
@@ -398,104 +392,89 @@ function App() {
         layerCtx.lineTo(rightX, bottomY);
         layerCtx.closePath();
         layerCtx.fill();
-        layerCtx.filter = 'none';
       }
 
-      layerCtx.globalCompositeOperation = 'destination-out';
-      for (const idxList of [LEFT_EYE, RIGHT_EYE, LEFT_EYEBROW, RIGHT_EYEBROW]) {
-        layerCtx.beginPath();
-        layerCtx.moveTo(landmarks[idxList[0]].x * fw, landmarks[idxList[0]].y * fh);
-        for (let i = 1; i < idxList.length; i++) {
-          layerCtx.lineTo(landmarks[idxList[i]].x * fw, landmarks[idxList[i]].y * fh);
-        }
-        layerCtx.closePath();
-        layerCtx.fill();
-      }
+      // 2. Вирізаємо очі та рот — до блюру
+      punchOutEyesMouth(layerCtx, landmarks, fw, fh);
 
+      // 3. Blur via temp canvas
+      const blurCanvas = document.createElement('canvas');
+      blurCanvas.width = fw; blurCanvas.height = fh;
+      const blurCtx = blurCanvas.getContext('2d');
+      blurCtx.filter = 'blur(6px)';
+      blurCtx.drawImage(layerCanvasRef.current, 0, 0);
+      blurCtx.filter = 'none';
+      layerCtx.clearRect(0, 0, fw, fh);
+      layerCtx.drawImage(blurCanvas, 0, 0);
+
+      // 4. Вирізаємо повторно — після блюру
+      punchOutEyesMouth(layerCtx, landmarks, fw, fh);
+
+      // 5. Composite to main canvas — single source-over pass
       ctx.save();
-      ctx.globalCompositeOperation = 'soft-light';
-      ctx.drawImage(layerCanvas, 0, 0);
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.drawImage(layerCanvasRef.current, 0, 0);
       ctx.restore();
 
+      // ── Matte
       if (alphaMatte > 0) {
-        const matteCanvas = document.createElement('canvas');
-        matteCanvas.width = fw;
-        matteCanvas.height = fh;
-        const matteCtx = matteCanvas.getContext('2d');
+        const matteCtx = ensureLayerCanvas(matteCanvasRef, fw, fh);
+        matteCtx.clearRect(0, 0, fw, fh);
+        matteCtx.fillStyle = `rgba(${rgbFoundation.r},${rgbFoundation.g},${rgbFoundation.b},${alphaMatte * alphaFoundation * 0.5})`;
+        fillPath(matteCtx, landmarks, FACE_OVAL, fw, fh);
+        matteCtx.fill();
+        punchOutEyesMouth(matteCtx, landmarks, fw, fh);
 
-        matteCtx.globalCompositeOperation = 'source-over';
-        matteCtx.fillStyle = `rgba(${rgbFoundation.r}, ${rgbFoundation.g}, ${rgbFoundation.b}, ${alphaMatte * alphaFoundation * 0.5})`;
-        (function drawMatteOval() {
-          matteCtx.beginPath();
-          matteCtx.moveTo(landmarks[FACE_OVAL[0]].x * fw, landmarks[FACE_OVAL[0]].y * fh);
-          for (let i = 1; i < FACE_OVAL.length; i++) {
-            matteCtx.lineTo(landmarks[FACE_OVAL[i]].x * fw, landmarks[FACE_OVAL[i]].y * fh);
-          }
-          matteCtx.closePath();
-          matteCtx.fill();
-        })();
-
-        matteCtx.globalCompositeOperation = 'destination-out';
-        for (const idxList of [LEFT_EYE, RIGHT_EYE, LEFT_EYEBROW, RIGHT_EYEBROW]) {
-          matteCtx.beginPath();
-          matteCtx.moveTo(landmarks[idxList[0]].x * fw, landmarks[idxList[0]].y * fh);
-          for (let i = 1; i < idxList.length; i++) {
-            matteCtx.lineTo(landmarks[idxList[i]].x * fw, landmarks[idxList[i]].y * fh);
-          }
-          matteCtx.closePath();
-          matteCtx.fill();
-        }
+        const mBlurCanvas = document.createElement('canvas');
+        mBlurCanvas.width = fw; mBlurCanvas.height = fh;
+        const mBlurCtx = mBlurCanvas.getContext('2d');
+        mBlurCtx.filter = 'blur(4px)';
+        mBlurCtx.drawImage(matteCanvasRef.current, 0, 0);
+        mBlurCtx.filter = 'none';
+        matteCtx.clearRect(0, 0, fw, fh);
+        matteCtx.drawImage(mBlurCanvas, 0, 0);
+        punchOutEyesMouth(matteCtx, landmarks, fw, fh);
 
         ctx.save();
         ctx.globalCompositeOperation = 'multiply';
-        ctx.drawImage(matteCanvas, 0, 0);
+        ctx.drawImage(matteCanvasRef.current, 0, 0);
         ctx.restore();
       }
     }
 
     // ============================================================
-    // LIP LINER — contour pencil along the outer edge of the lips
+    // LIP LINER
     // ============================================================
     if (showLipLiner && rgbLipLiner) {
-      const lineWidth = Math.max(1.5, Math.round(fw * 0.004));
-
       ctx.save();
-      ctx.strokeStyle = `rgba(${rgbLipLiner.r}, ${rgbLipLiner.g}, ${rgbLipLiner.b}, 0.3)`;
-      ctx.lineWidth = lineWidth;
+      ctx.strokeStyle = `rgba(${rgbLipLiner.r},${rgbLipLiner.g},${rgbLipLiner.b},0.3)`;
+      ctx.lineWidth = Math.max(1.5, Math.round(fw * 0.004));
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
-
-      // Upper lip outline
-      createStrokePath(LIPS_UPPER_BORDER_OUTER);
+      strokePath(ctx, landmarks, LIPS_UPPER_BORDER_OUTER, fw, fh);
       ctx.stroke();
-
-      // Lower lip outline
-      createStrokePath(LIPS_LOWER_BORDER_OUTER);
+      strokePath(ctx, landmarks, LIPS_LOWER_BORDER_OUTER, fw, fh);
       ctx.stroke();
-
       ctx.restore();
     }
 
     // ============================================================
-    // LIP COLOR (lipstick)
+    // LIP COLOR
     // ============================================================
     if (showLip && rgbLip) {
       ctx.save();
-      ctx.beginPath();
-      createPath(LIPS_LOWER_OUTER, true);
+      fillPath(ctx, landmarks, LIPS_LOWER_OUTER, fw, fh);
       ctx.clip('evenodd');
       ctx.globalCompositeOperation = 'multiply';
-      ctx.fillStyle = `rgba(${rgbLip.r}, ${rgbLip.g}, ${rgbLip.b}, 0.7)`;
-      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      ctx.fillStyle = `rgba(${rgbLip.r},${rgbLip.g},${rgbLip.b},0.7)`;
+      ctx.fillRect(0, 0, fw, fh);
       ctx.restore();
-
       ctx.save();
-      ctx.beginPath();
-      createPath(LIPS_UPPER_OUTER, true);
+      fillPath(ctx, landmarks, LIPS_UPPER_OUTER, fw, fh);
       ctx.clip('evenodd');
       ctx.globalCompositeOperation = 'multiply';
-      ctx.fillStyle = `rgba(${rgbLip.r}, ${rgbLip.g}, ${rgbLip.b}, 0.7)`;
-      ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      ctx.fillStyle = `rgba(${rgbLip.r},${rgbLip.g},${rgbLip.b},0.7)`;
+      ctx.fillRect(0, 0, fw, fh);
       ctx.restore();
     }
 
@@ -505,11 +484,11 @@ function App() {
     if (showBlush && rgbBlush) {
       ctx.save();
       ctx.globalCompositeOperation = 'overlay';
-      ctx.fillStyle = `rgba(${rgbBlush.r}, ${rgbBlush.g}, ${rgbBlush.b}, 0.4)`;
-      createPath(BLUSH_LEFT);
+      ctx.fillStyle = `rgba(${rgbBlush.r},${rgbBlush.g},${rgbBlush.b},0.4)`;
+      fillPath(ctx, landmarks, BLUSH_LEFT, fw, fh);
       ctx.filter = 'blur(10px)';
       ctx.fill();
-      createPath(BLUSH_RIGHT);
+      fillPath(ctx, landmarks, BLUSH_RIGHT, fw, fh);
       ctx.filter = 'blur(10px)';
       ctx.fill();
       ctx.filter = 'none';
@@ -517,75 +496,54 @@ function App() {
     }
 
     // ============================================================
-    // LIP GLOSS — wet-look specular highlights with head-reactive shine
+    // LIP GLOSS
     // ============================================================
-    if (showGloss && rgbGloss && alphaGloss > 0) {
-      const lipLeft = landmarks[61];
-      const lipRight = landmarks[291];
-      let motionPhase = 0;
-      if (lipLeft && lipRight) {
-        const dx = lipRight.x - lipLeft.x;
-        const dy = lipRight.y - lipLeft.y;
-        const angle = Math.atan2(dy, dx);
-        motionPhase = (angle + Math.PI) / (Math.PI * 2);
+    if (showGloss && rgbGloss) {
+      const alphaGloss = Math.max(0, Math.min(1, lipGlossOpacity));
+      if (alphaGloss > 0) {
+        const lipLeft = landmarks[61];
+        const lipRight = landmarks[291];
+        let motionPhase = 0;
+        if (lipLeft && lipRight) {
+          const dx = lipRight.x - lipLeft.x;
+          const dy = lipRight.y - lipLeft.y;
+          motionPhase = (Math.atan2(dy, dx) + Math.PI) / (Math.PI * 2);
+        }
+        const specStrength = alphaGloss * 0.7;
+        const drawSpecular = (cx, cy, radius, strength) => {
+          const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
+          grad.addColorStop(0, `rgba(255,255,255,${strength})`);
+          grad.addColorStop(0.1, `rgba(255,255,255,${strength * 0.7})`);
+          grad.addColorStop(0.3, `rgba(255,255,255,${strength * 0.3})`);
+          grad.addColorStop(0.6, `rgba(255,255,255,${strength * 0.08})`);
+          grad.addColorStop(1, 'rgba(255,255,255,0)');
+          ctx.globalCompositeOperation = 'screen';
+          ctx.fillStyle = grad;
+          ctx.fillRect(0, 0, fw, fh);
+        };
+        ctx.save();
+        fillPath(ctx, landmarks, LIPS_LOWER_OUTER, fw, fh);
+        ctx.clip('evenodd');
+        const lipCenter = landmarks[14];
+        if (lipCenter) {
+          drawSpecular(lipCenter.x * fw + (0.5 - motionPhase) * fw * 0.08,
+            Math.max(0, lipCenter.y * fh + (-fw * 0.025 + Math.abs(0.5 - motionPhase) * fw * 0.015)),
+            fw * 0.06, specStrength);
+        }
+        const lipSide = landmarks[17], lipSide2 = landmarks[16];
+        if (lipSide) drawSpecular(lipSide.x * fw + (0.5 - motionPhase) * fw * 0.04,
+          Math.max(0, lipSide.y * fh - fw * 0.015), fw * 0.04, specStrength * 0.5);
+        if (lipSide2) drawSpecular(lipSide2.x * fw - (0.5 - motionPhase) * fw * 0.04,
+          Math.max(0, lipSide2.y * fh - fw * 0.01), fw * 0.035, specStrength * 0.35);
+        ctx.restore();
+        ctx.save();
+        fillPath(ctx, landmarks, LIPS_UPPER_OUTER, fw, fh);
+        ctx.clip('evenodd');
+        const upperLipCenter = landmarks[0];
+        if (upperLipCenter) drawSpecular(upperLipCenter.x * fw + (0.5 - motionPhase) * fw * 0.03,
+          Math.max(0, upperLipCenter.y * fh - fw * 0.02), fw * 0.03, specStrength * 0.35);
+        ctx.restore();
       }
-
-      const specStrength = alphaGloss * 0.7;
-      const lipW = ctx.canvas.width;
-
-      const drawSpecular = (cx, cy, radius, strength) => {
-        const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, radius);
-        grad.addColorStop(0, `rgba(255, 255, 255, ${strength})`);
-        grad.addColorStop(0.1, `rgba(255, 255, 255, ${strength * 0.7})`);
-        grad.addColorStop(0.3, `rgba(255, 255, 255, ${strength * 0.3})`);
-        grad.addColorStop(0.6, `rgba(255, 255, 255, ${strength * 0.08})`);
-        grad.addColorStop(1, 'rgba(255, 255, 255, 0)');
-        ctx.globalCompositeOperation = 'screen';
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-      };
-
-      ctx.save();
-      ctx.beginPath();
-      createPath(LIPS_LOWER_OUTER, true);
-      ctx.clip('evenodd');
-
-      const lipCenter = landmarks[14];
-      if (lipCenter) {
-        const offsetX = (0.5 - motionPhase) * lipW * 0.08;
-        const offsetY = -lipW * 0.025 + Math.abs(0.5 - motionPhase) * lipW * 0.015;
-        const hx = lipCenter.x * lipW + offsetX;
-        const hy = Math.max(0, lipCenter.y * ctx.canvas.height + offsetY);
-        drawSpecular(hx, hy, lipW * 0.06, specStrength);
-      }
-
-      const lipSide = landmarks[17];
-      if (lipSide) {
-        const hx2 = lipSide.x * lipW + (0.5 - motionPhase) * lipW * 0.04;
-        const hy2 = Math.max(0, lipSide.y * ctx.canvas.height - lipW * 0.015);
-        drawSpecular(hx2, hy2, lipW * 0.04, specStrength * 0.5);
-      }
-
-      const lipSide2 = landmarks[16];
-      if (lipSide2) {
-        const hx3 = lipSide2.x * lipW - (0.5 - motionPhase) * lipW * 0.04;
-        const hy3 = Math.max(0, lipSide2.y * ctx.canvas.height - lipW * 0.01);
-        drawSpecular(hx3, hy3, lipW * 0.035, specStrength * 0.35);
-      }
-      ctx.restore();
-
-      ctx.save();
-      ctx.beginPath();
-      createPath(LIPS_UPPER_OUTER, true);
-      ctx.clip('evenodd');
-
-      const upperLipCenter = landmarks[0];
-      if (upperLipCenter) {
-        const hx = upperLipCenter.x * lipW + (0.5 - motionPhase) * lipW * 0.03;
-        const hy = Math.max(0, upperLipCenter.y * ctx.canvas.height - lipW * 0.02);
-        drawSpecular(hx, hy, lipW * 0.03, specStrength * 0.35);
-      }
-      ctx.restore();
     }
   }
 
@@ -605,6 +563,7 @@ function App() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
+  // ───── Блок "немає камери" ─────
   if (!cameraSupported) {
     return (
       <div className="app-wrapper flex flex-col items-center justify-center min-h-screen bg-gray-900 text-white p-4">
@@ -618,11 +577,10 @@ function App() {
     );
   }
 
+  // ───── Десктопні контроли ─────
   const controlsContent = (
     <>
       <h3 className="text-2xl font-bold text-center text-pink-300">Virtual Makeover</h3>
-
-      {/* LAYER TOGGLES */}
       <div className="control-group grid grid-cols-2 gap-2">
         <label className="flex items-center text-sm font-medium text-gray-300 gap-2">
           <input type="checkbox" checked={showFoundation} onChange={(e) => setShowFoundation(e.target.checked)} className="accent-pink-500" /> Foundation
@@ -640,7 +598,6 @@ function App() {
           <input type="checkbox" checked={showGloss} onChange={(e) => setShowGloss(e.target.checked)} className="accent-pink-500" /> Gloss
         </label>
       </div>
-
       <div className="control-group">
         <label className="block text-sm font-medium text-gray-300 mb-2">Foundation Shade</label>
         <div className="grid grid-cols-3 gap-2 mb-3">
@@ -650,29 +607,22 @@ function App() {
         </div>
         <input type="color" value={foundationColor} onChange={(e) => setFoundationColor(e.target.value)} className="w-full h-10 p-1 rounded-md cursor-pointer border border-gray-600 bg-gray-800" title="Custom Foundation Color" />
       </div>
-
       <div className="control-group">
         <label className="block text-sm font-medium text-gray-300 mb-2">Coverage: {Math.round(opacity * 100)}%</label>
         <input type="range" min="0" max="1" step="0.01" value={opacity} onChange={(e) => setOpacity(parseFloat(e.target.value))} className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer range-lg" />
       </div>
-
       <div className="control-group">
         <label className="block text-sm font-medium text-gray-300 mb-2">Matte Finish: {Math.round(matte * 100)}%</label>
         <input type="range" min="0" max="1" step="0.01" value={matte} onChange={(e) => setMatte(parseFloat(e.target.value))} className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer range-lg" />
       </div>
-
       <div className="control-group">
-        <label className="flex items-center text-sm font-medium text-gray-300 mb-2">
-          <input type="checkbox" checked={skinSmooth} onChange={(e) => setSkinSmooth(e.target.checked)} className="mr-2" /> Skin Smoothing
-        </label>
+        <label className="flex items-center text-sm font-medium text-gray-300 mb-2"><input type="checkbox" checked={skinSmooth} onChange={(e) => setSkinSmooth(e.target.checked)} className="mr-2" /> Skin Smoothing</label>
       </div>
-
       <div className="control-group">
         <label className="block text-sm font-medium text-gray-300 mb-2">Smoothing Strength: {Math.round(skinSmoothStrength * 100)}%</label>
         <input type="range" min="0" max="1" step="0.01" value={skinSmoothStrength} onChange={(e) => setSkinSmoothStrength(parseFloat(e.target.value))} className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer range-lg" />
         <p className="text-xs text-gray-400 mt-1">0% = off | 100% = maximum airbrush effect</p>
       </div>
-
       <div className="control-group">
         <label className="block text-sm font-medium text-gray-300 mb-2">Lip Liner Color</label>
         <div className="grid grid-cols-3 gap-2 mb-3">
@@ -682,7 +632,6 @@ function App() {
         </div>
         <input type="color" value={lipLinerColor} onChange={(e) => setLipLinerColor(e.target.value)} className="w-full h-10 p-1 rounded-md cursor-pointer border border-gray-600 bg-gray-800" title="Custom Lip Liner Color" />
       </div>
-
       <div className="control-group">
         <label className="block text-sm font-medium text-gray-300 mb-2">Lip Color</label>
         <div className="grid grid-cols-3 gap-2 mb-3">
@@ -692,7 +641,6 @@ function App() {
         </div>
         <input type="color" value={lipColor} onChange={(e) => setLipColor(e.target.value)} className="w-full h-10 p-1 rounded-md cursor-pointer border border-gray-600 bg-gray-800" title="Custom Lip Color" />
       </div>
-
       <div className="control-group">
         <label className="block text-sm font-medium text-gray-300 mb-2">Blush Color</label>
         <div className="grid grid-cols-3 gap-2 mb-3">
@@ -702,7 +650,6 @@ function App() {
         </div>
         <input type="color" value={blushColor} onChange={(e) => setBlushColor(e.target.value)} className="w-full h-10 p-1 rounded-md cursor-pointer border border-gray-600 bg-gray-800" title="Custom Blush Color" />
       </div>
-
       <div className="flex flex-col gap-4 mt-auto">
         <button onClick={takeScreenshot} className="w-full py-2 px-4 bg-green-500 hover:bg-green-600 rounded-md font-semibold transition-all duration-200">Take Screenshot</button>
       </div>
@@ -716,32 +663,41 @@ function App() {
     </>
   );
 
+  // ───── Foundation tones picker ─────
+  const [showFoundationTones, setShowFoundationTones] = useState(false);
+
+  const foundationTonesPanel = (
+    <div className="foundation-tones-overlay" onClick={() => setShowFoundationTones(false)}>
+      <div className="foundation-tones-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="foundation-tones-header">
+          <h3>Тональний крем</h3>
+          <button className="foundation-tones-close" onClick={() => setShowFoundationTones(false)}>✕</button>
+        </div>
+        <div className="foundation-tones-grid">
+          {foundationTones.map(tone => (
+            <button
+              key={tone.sku}
+              className={`foundation-tone-btn ${foundationColor === tone.hex ? 'selected' : ''}`}
+              onClick={() => {
+                setFoundationColor(tone.hex);
+                setShowFoundationTones(false);
+              }}
+            >
+              <span className="foundation-tone-circle" style={{ backgroundColor: tone.hex }} />
+              <span className="foundation-tone-number">{tone.number}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
   const pickerMeta = {
-    foundation: {
-      title: 'Тональний крем', currentColor: foundationColor, setColor: setFoundationColor,
-      swatches: ['#f3cfb3', '#e4b38d', '#d3a17e', '#c68e65', '#8d5524', '#5c381a', '#3e2211', '#f5e0cc'],
-      show: showFoundation, toggle: () => setShowFoundation(v => !v),
-    },
-    blush: {
-      title: 'Рум\'яна', currentColor: blushColor, setColor: setBlushColor,
-      swatches: ['#FF9999', '#FFCCCC', '#F08080', '#CD5C5C', '#E9967A', '#FFA07A', '#FFB6C1', '#FF69B4'],
-      show: showBlush, toggle: () => setShowBlush(v => !v),
-    },
-    lip: {
-      title: 'Помада', currentColor: lipColor, setColor: setLipColor,
-      swatches: ['#CC3333', '#FF6699', '#EE82EE', '#A0522D', '#8B0000', '#FFD700', '#DC143C', '#C71585'],
-      show: showLip, toggle: () => setShowLip(v => !v),
-    },
-    gloss: {
-      title: 'Блиск для губ', currentColor: lipGlossColor, setColor: setLipGlossColor,
-      swatches: ['#FFD6E8', '#FFD700', '#FFE4B5', '#F5DEB3', '#E0F0FF', '#FFC0CB', '#DDA0DD', '#FFF0F5'],
-      show: showGloss, toggle: () => setShowGloss(v => !v),
-    },
-    lipLiner: {
-      title: 'Контур для губ', currentColor: lipLinerColor, setColor: setLipLinerColor,
-      swatches: ['#8B0000', '#A0522D', '#CD5C5C', '#800020', '#483C32', '#660000', '#4A0404', '#2C1608'],
-      show: showLipLiner, toggle: () => setShowLipLiner(v => !v),
-    },
+    foundation: { title: 'Тональний крем', currentColor: foundationColor, setColor: setFoundationColor, swatches: ['#f3cfb3', '#e4b38d', '#d3a17e', '#c68e65', '#8d5524', '#5c381a', '#3e2211', '#f5e0cc'], show: showFoundation, toggle: () => setShowFoundation(v => !v) },
+    blush: { title: "Рум'яна", currentColor: blushColor, setColor: setBlushColor, swatches: ['#FF9999', '#FFCCCC', '#F08080', '#CD5C5C', '#E9967A', '#FFA07A', '#FFB6C1', '#FF69B4'], show: showBlush, toggle: () => setShowBlush(v => !v) },
+    lip: { title: 'Помада', currentColor: lipColor, setColor: setLipColor, swatches: ['#CC3333', '#FF6699', '#EE82EE', '#A0522D', '#8B0000', '#FFD700', '#DC143C', '#C71585'], show: showLip, toggle: () => setShowLip(v => !v) },
+    gloss: { title: 'Блиск для губ', currentColor: lipGlossColor, setColor: setLipGlossColor, swatches: ['#FFD6E8', '#FFD700', '#FFE4B5', '#F5DEB3', '#E0F0FF', '#FFC0CB', '#DDA0DD', '#FFF0F5'], show: showGloss, toggle: () => setShowGloss(v => !v) },
+    lipLiner: { title: 'Контур для губ', currentColor: lipLinerColor, setColor: setLipLinerColor, swatches: ['#8B0000', '#A0522D', '#CD5C5C', '#800020', '#483C32', '#660000', '#4A0404', '#2C1608'], show: showLipLiner, toggle: () => setShowLipLiner(v => !v) },
   };
 
   const activePicker = activeColorPicker ? pickerMeta[activeColorPicker] : null;
@@ -763,9 +719,7 @@ function App() {
           <input type="color" value={activePicker.currentColor} onChange={(e) => { activePicker.setColor(e.target.value); setActiveColorPicker(null); }} />
         </div>
         <div className="bottom-actions">
-          <button className="btn-compare" onClick={() => { activePicker.toggle(); setActiveColorPicker(null); }}>
-            {activePicker.show ? 'Прибрати шар' : 'Показати шар'}
-          </button>
+          <button className="btn-compare" onClick={() => { activePicker.toggle(); setActiveColorPicker(null); }}>{activePicker.show ? 'Прибрати шар' : 'Показати шар'}</button>
           <button className="btn-screenshot" onClick={() => { takeScreenshot(); setActiveColorPicker(null); }}>Фото</button>
         </div>
       </div>
@@ -777,35 +731,30 @@ function App() {
       <div className="mobile-layout">
         <div className="video-area">{videoCanvas}</div>
         {lowLightWarning && (
-          <div className="shadow-warning shadow-warning-overlay">
-            <span>⚠️</span> Недостатньо світла — додайте освітлення для точного підбору тону
-          </div>
+          <div className="shadow-warning shadow-warning-overlay"><span>⚠️</span> Недостатньо світла — додайте освітлення для точного підбору тону</div>
         )}
         <div className="controls-panel">
           <div className="color-buttons">
             <div className="color-btn-wrapper">
-              <button className={`color-btn color-btn-foundation ${activeColorPicker === 'foundation' ? 'active' : ''}`} style={{ border: `5px solid ${foundationColor}` }} onClick={() => setActiveColorPicker(activeColorPicker === 'foundation' ? null : 'foundation')}>
-              </button>
+              <button className={`color-btn color-btn-foundation ${activeColorPicker === 'foundation' || showFoundationTones ? 'active' : ''}`} style={{ border: `5px solid ${foundationColor}` }} onClick={() => setShowFoundationTones(true)} />
               <span className="color-btn-label">Foundation</span>
             </div>
             <div className="color-btn-wrapper">
-              <button className={`color-btn color-btn-blush ${activeColorPicker === 'blush' ? 'active' : ''}`} style={{ border: `5px solid ${blushColor}` }} onClick={() => setActiveColorPicker(activeColorPicker === 'blush' ? null : 'blush')}>
-              </button>
+              <button className={`color-btn color-btn-blush ${activeColorPicker === 'blush' ? 'active' : ''}`} style={{ border: `5px solid ${blushColor}` }} onClick={() => setActiveColorPicker(activeColorPicker === 'blush' ? null : 'blush')} />
               <span className="color-btn-label">Blush</span>
             </div>
             <div className="color-btn-wrapper">
-              <button className={`color-btn color-btn-lip ${activeColorPicker === 'lip' ? 'active' : ''}`} style={{ border: `5px solid ${lipColor}` }} onClick={() => setActiveColorPicker(activeColorPicker === 'lip' ? null : 'lip')}>
-              </button>
+              <button className={`color-btn color-btn-lip ${activeColorPicker === 'lip' ? 'active' : ''}`} style={{ border: `5px solid ${lipColor}` }} onClick={() => setActiveColorPicker(activeColorPicker === 'lip' ? null : 'lip')} />
               <span className="color-btn-label">Lipstick</span>
             </div>
             <div className="color-btn-wrapper">
-              <button className={`color-btn color-btn-liner ${activeColorPicker === 'lipLiner' ? 'active' : ''}`} style={{ border: `5px solid ${lipLinerColor}` }} onClick={() => setActiveColorPicker(activeColorPicker === 'lipLiner' ? null : 'lipLiner')}>
-              </button>
+              <button className={`color-btn color-btn-liner ${activeColorPicker === 'lipLiner' ? 'active' : ''}`} style={{ border: `5px solid ${lipLinerColor}` }} onClick={() => setActiveColorPicker(activeColorPicker === 'lipLiner' ? null : 'lipLiner')} />
               <span className="color-btn-label">Liner</span>
             </div>
           </div>
         </div>
-        {colorPickerOverlay}
+        {activeColorPicker && activeColorPicker !== 'foundation' && colorPickerOverlay}
+        {showFoundationTones && foundationTonesPanel}
       </div>
     );
   }
@@ -814,9 +763,7 @@ function App() {
     <div className="desktop-layout min-h-screen bg-gray-900 text-white p-4">
       <div className="main-content flex flex-col lg:flex-row items-center gap-8 bg-gray-800 p-6 rounded-lg shadow-xl max-w-6xl mx-auto">
         <div className="side-panel flex flex-col gap-6 w-full lg:w-80 bg-gray-700 p-5 rounded-lg order-1 lg:order-2">
-          {lowLightWarning && (
-            <div className="shadow-warning"><span>⚠️</span> Недостатньо світла — додайте освітлення для точного підбору тону</div>
-          )}
+          {lowLightWarning && <div className="shadow-warning"><span>⚠️</span> Недостатньо світла — додайте освітлення для точного підбору тону</div>}
           {controlsContent}
         </div>
         <div className="flex justify-center lg:justify-start w-full lg:w-auto order-2 lg:order-1">

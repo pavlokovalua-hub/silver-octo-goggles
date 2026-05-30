@@ -1,16 +1,13 @@
 /**
- * Optimised Skin Smoothing Module
+ * Optimised Skin Smoothing Module — v2 (GPU-only, no getImageData/putImageData)
  *
- * GPU-accelerated: blurs at half resolution (4× fewer pixels),
- * reuses canvases across frames (zero GC), and composites via
- * alpha-channel masking and globalAlpha — no per-pixel JS blend loop.
+ * Позбуваємося дорогого CPU↔GPU roundtrip через getImageData/putImageData.
  *
- * Pipeline:
- *   1. Build feathered skin mask (reusable mask canvas)
- *   2. Downscale frame to ½ resolution, blur it
- *   3. Copy mask alpha → blurred frame's alpha channel
- *   4. Composite blurred frame over original via globalAlpha
- *   5. Upscale back to full resolution (free bilinear from canvas)
+ * Новий pipeline (чисто GPU через canvas compositing):
+ *   1. Будуємо маску шкіри з прозорим фоном (альфа-канал = ступінь накладання)
+ *   2. Зменшуємо кадр до ½ розміру, розмиваємо (4× менше пікселів)
+ *   3. destination-in: накладаємо маску на розмитий кадр (альфа маски = α розмиття)
+ *   4. Композитимо через globalAlpha + drawImage (upscale — безкоштовний білінійний)
  */
 
 // ---------------------------------------------------------------------------
@@ -45,7 +42,7 @@ const FEATURE_SETS: number[][] = [
   LEFT_EYEBROW_INDICES, RIGHT_EYEBROW_INDICES,
 ];
 
-const CRITICAL_FEATURES: number[][] = [
+const EYE_BROW_SETS: number[][] = [
   LEFT_EYE_INDICES, RIGHT_EYE_INDICES,
   LEFT_EYEBROW_INDICES, RIGHT_EYEBROW_INDICES,
 ];
@@ -95,7 +92,7 @@ function fillPolygon(
 }
 
 // ---------------------------------------------------------------------------
-// applySkinSmoothing  (main export)
+// applySkinSmoothing  (main export) — v2: GPU-only compositing
 // ---------------------------------------------------------------------------
 
 export function applySkinSmoothing(
@@ -107,39 +104,40 @@ export function applySkinSmoothing(
 ): void {
   if (strength <= 0) return;
 
-  // Half-resolution working size (4× fewer pixels)
+  // Half-resolution (4× fewer pixels = ~4× faster blur)
   const sw = Math.max(1, Math.round(width / 2));
   const sh = Math.max(1, Math.round(height / 2));
 
   ensureCanvases(sw, sh);
 
-  // ── 1. Build feathered skin mask (grayscale: 0=features, 255=skin) ──
+  // ── 1. Build skin mask with alpha feathering (GPU-only) ──
   const mCtx = _maskCtx!;
-  mCtx.fillStyle = '#000000';
-  mCtx.fillRect(0, 0, sw, sh);
 
+  // Start with fully transparent canvas
+  mCtx.clearRect(0, 0, sw, sh);
+
+  // Fill face oval with white (fully opaque — A=255)
   mCtx.fillStyle = '#ffffff';
   fillPolygon(mCtx, landmarks, FACE_OVAL_INDICES, sw, sh);
 
-  mCtx.fillStyle = '#000000';
-  for (const indices of FEATURE_SETS) {
-    fillPolygon(mCtx, landmarks, indices, sw, sh);
-  }
-
-  // Feather all edges
+  // First feather pass: blur the white fill
+  // This creates semitransparent pixels at the oval edges
   mCtx.filter = 'blur(8px)';
-  mCtx.fillStyle = '#ffffff';
   fillPolygon(mCtx, landmarks, FACE_OVAL_INDICES, sw, sh);
   mCtx.filter = 'none';
 
-  // Sharply re-cut eyes & brows (zero smoothing)
-  mCtx.fillStyle = '#000000';
-  for (const indices of CRITICAL_FEATURES) {
+  // Cut out features (eyes, brows, lips) using destination-out
+  // This sets their alpha to 0 (fully transparent)
+  mCtx.globalCompositeOperation = 'destination-out';
+  mCtx.fillStyle = '#ffffff';
+  for (const indices of FEATURE_SETS) {
     fillPolygon(mCtx, landmarks, indices, sw, sh);
   }
+  mCtx.globalCompositeOperation = 'source-over';
 
   // ── 2. Downscale & blur the frame ──
   const bCtx = _blurCtx!;
+  bCtx.clearRect(0, 0, sw, sh);
   bCtx.drawImage(ctx.canvas, 0, 0, sw, sh);
 
   const blurRadius = Math.max(2, Math.round(strength * 20));
@@ -147,27 +145,16 @@ export function applySkinSmoothing(
   bCtx.drawImage(_blurCanvas!, 0, 0);
   bCtx.filter = 'none';
 
-  // ── 3. Apply skin mask to the blurred frame's alpha channel ──
-  //    Where mask = 0 (eyes/brows) → alpha = 0 → invisible when composited
-  //    Where mask > 0 (skin) → alpha = mask → visible with soft feather edges
-  const blurredData = bCtx.getImageData(0, 0, sw, sh);
-  const maskData = mCtx.getImageData(0, 0, sw, sh);
-  const n = sw * sh;
-
-  for (let i = 0; i < n; i++) {
-    const idx = i * 4;
-    // Set alpha to mask luminance (R, G, B are identical in grayscale mask)
-    blurredData.data[idx + 3] = maskData.data[idx];
-  }
-  bCtx.putImageData(blurredData, 0, 0);
+  // ── 3. Apply mask alpha to blurred frame via destination-in ──
+  //    Where mask has alpha=0 → blurred is removed
+  //    Where mask has alpha=255 → blurred is fully kept
+  //    Where mask has alpha=128 → blurred is 50% kept (feathering)
+  bCtx.globalCompositeOperation = 'destination-in';
+  bCtx.drawImage(_maskCanvas!, 0, 0);
+  bCtx.globalCompositeOperation = 'source-over';
 
   // ── 4. Composite over the original canvas ──
-  //    globalAlpha applies uniformly to all blurred pixels.
-  //    Per-pixel variation comes from the alpha channel we just set.
-  //    Canvas compositing: result = src * srcAlpha + dst * (1 - srcAlpha)
-  //    So: skin pixels (alpha=255) get full blend at globalAlpha
-  //        eyes (alpha=0) are invisible → original shows through
-  //        edges (alpha=128) get 50% of the blur effect
+  //    globalAlpha controls overall effect strength
   ctx.save();
   ctx.globalAlpha = strength;
   ctx.drawImage(_blurCanvas!, 0, 0, width, height);
