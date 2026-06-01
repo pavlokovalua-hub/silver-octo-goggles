@@ -1,0 +1,102 @@
+[
+  {
+    "sku": "212-519053",
+    "background": "rgb(137, 76, 74)",
+    "name": "Antique pink (matte finish)"
+  },
+  {
+    "sku": "212-519050",
+    "background": "rgb(139, 77, 80)",
+    "name": "Aubergine (matte finish)"
+  },
+  {
+    "sku": "212-519072",
+    "background": "rgb(156, 64, 85)",
+    "name": "Bazooka (matte finish)"
+  },
+  {
+    "sku": "212-519076",
+    "background": "rgb(86, 11, 50)",
+    "name": "Boo boo (matte finish)"
+  },
+  {
+    "sku": "212-519049",
+    "background": "rgb(122, 57, 52)",
+    "name": "Burgundy (matte finish)"
+  },
+  {
+    "sku": "212-519046",
+    "background": "rgb(140, 20, 32)",
+    "name": "Chic (matte finish)"
+  },
+  {
+    "sku": "212-519078",
+    "background": "rgb(134, 64, 109)",
+    "name": "Clueless (matte finish)"
+  },
+  {
+    "sku": "212-519052",
+    "background": "rgb(148, 99, 78)",
+    "name": "Coffee (matte finish)"
+  },
+  {
+    "sku": "212-519074",
+    "background": "rgb(146, 41, 55)",
+    "name": "Crimson (matte finish)"
+  },
+  {
+    "sku": "212-519082",
+    "background": "rgb(183, 83, 85)",
+    "name": "Flamingo (matte finish)"
+  },
+  {
+    "sku": "212-519054",
+    "background": "rgb(156, 50, 54)",
+    "name": "Hot red (matte finish)"
+  },
+  {
+    "sku": "212-519071",
+    "background": "rgb(190, 120, 128)",
+    "name": "Lollipop (matte finish)"
+  },
+  {
+    "sku": "212-519073",
+    "background": "rgb(148, 73, 53)",
+    "name": "Mango (semi matte finish)"
+  },
+  {
+    "sku": "212-519070",
+    "background": "rgb(173, 124, 115)",
+    "name": "Naked (semi matte finish)"
+  },
+  {
+    "sku": "212-519047",
+    "background": "rgb(195, 94, 100)",
+    "name": "Poppy (matte finish)"
+  },
+  {
+    "sku": "212-519051",
+    "background": "rgb(167, 9, 51)",
+    "name": "Rose (semi matte finish)"
+  },
+  {
+    "sku": "212-519083",
+    "background": "rgb(166, 97, 116)",
+    "name": "Smoothie (matte finish)"
+  },
+  {
+    "sku": "212-519055",
+    "background": "rgb(159, 79, 84)",
+    "name": "Tulip (matte finish)"
+  },
+  {
+    "sku": "212-519056",
+    "background": "rgb(159, 95, 100)",
+    "name": "Vintage (matte finish)"
+  },
+  {
+    "sku": "212-519075",
+    "background": "rgb(183, 21, 87)",
+    "name": "Yummy (semi matte finish)"
+  }
+]

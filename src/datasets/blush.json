@@ -1,0 +1,42 @@
+[
+    {
+        "sku": "212-15503",
+        "name": "Big Spender",
+        "background": "rgb(245, 178, 170)"
+    },
+    {
+        "sku": "212-15506",
+        "name": "Bootylish",
+        "background": "rgb(233, 144, 149)"
+    },
+    {
+        "sku": "212-15505",
+        "name": "Isla Bonita",
+        "background": "rgb(249, 154, 180)"
+    },
+    {
+        "sku": "212-15501",
+        "name": "Lady Marmalade",
+        "background": "rgb(242, 150, 142)"
+    },
+    {
+        "sku": "212-15500",
+        "name": "Lolita",
+        "background": "rgb(240, 178, 185)"
+    },
+    {
+        "sku": "212-15504",
+        "name": "Poker Face",
+        "background": "rgb(245, 167, 152)"
+    },
+    {
+        "sku": "212-15507",
+        "name": "Toxic",
+        "background": "rgb(230, 108, 88)"
+    },
+    {
+        "sku": "212-15502",
+        "name": "Vogue - Dusty rose",
+        "background": "rgb(212, 148, 155)"
+    }
+]

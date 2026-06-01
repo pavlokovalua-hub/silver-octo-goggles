@@ -1,0 +1,82 @@
+[
+  {
+    "sku": "212-12703",
+    "background": "rgb(192, 79, 74)",
+    "name": "Ariadna"
+  },
+  {
+    "sku": "212-12717",
+    "background": "rgb(150, 29, 40)",
+    "name": "Averie"
+  },
+  {
+    "sku": "212-12704",
+    "background": "rgb(176, 4, 32)",
+    "name": "Bella"
+  },
+  {
+    "sku": "212-12716",
+    "background": "rgb(190, 101, 93)",
+    "name": "Betty"
+  },
+  {
+    "sku": "212-12713",
+    "background": "rgb(168, 91, 68)",
+    "name": "Cammie"
+  },
+  {
+    "sku": "212-12706",
+    "background": "rgb(160, 96, 87)",
+    "name": "Chloe mk"
+  },
+  {
+    "sku": "212-12707",
+    "background": "rgb(137, 86, 77)",
+    "name": "Ciara"
+  },
+  {
+    "sku": "212-12714",
+    "background": "rgb(80, 43, 34)",
+    "name": "Denden"
+  },
+  {
+    "sku": "212-12705",
+    "background": "rgb(116, 26, 32)",
+    "name": "Diaz"
+  },
+  {
+    "sku": "212-12709",
+    "background": "rgb(107, 32, 37)",
+    "name": "Divinitii"
+  },
+  {
+    "sku": "212-12708",
+    "background": "rgb(174, 82, 72)",
+    "name": "Elwa"
+  },
+  {
+    "sku": "212-12702",
+    "background": "rgb(198, 127, 98)",
+    "name": "Jayy"
+  },
+  {
+    "sku": "212-12712",
+    "background": "rgb(160, 56, 39)",
+    "name": "Jessica"
+  },
+  {
+    "sku": "212-12715",
+    "background": "rgb(166, 85, 70)",
+    "name": "Juany"
+  },
+  {
+    "sku": "212-12710",
+    "background": "rgb(128, 52, 40)",
+    "name": "Kairo"
+  },
+  {
+    "sku": "212-12701",
+    "background": "rgb(56, 42, 52)",
+    "name": "William"
+  }
+]
