@@ -57,6 +57,38 @@ const foundationTones = foundationsData.map(item => {
   return { sku: item.sku, hex, number };
 });
 
+// ───── Парсинг URL-параметра product-sku ─────
+function getProductSkuFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('product-sku');
+}
+
+// ───── Розділення тонів на зони, якщо передано product-sku ─────
+function computeToneZones(tones, targetSku) {
+  if (!targetSku) return null;
+
+  const index = tones.findIndex(t => t.sku === targetSku);
+  if (index === -1) return null;
+
+  // Safe zone — тільки знайдений тон
+  const safeZone = [tones[index]];
+
+  // Green zone — 2 тони до та 2 тони після
+  const before = tones.slice(Math.max(0, index - 2), index);
+  const after = tones.slice(index + 1, index + 3);
+  const greenZone = [...before, ...after];
+
+  // Unpredictable zone — всі тони, крім тих, що в safe та green
+  const excludedIndices = new Set([
+    index,
+    ...Array.from({ length: before.length }, (_, i) => index - before.length + i),
+    ...Array.from({ length: after.length }, (_, i) => index + 1 + i),
+  ]);
+  const unpredictableZone = tones.filter((_, i) => !excludedIndices.has(i));
+
+  return { safeZone, greenZone, unpredictableZone, selectedIndex: index };
+}
+
 // ─────── hex → RGB з кешем ───────
 const _hexRgbCache = new Map();
 function hexToRgb(hex) {
@@ -165,12 +197,21 @@ function punchOutEyesMouth(ctx, landmarks, fw, fh) {
   ctx.restore();
 }
 
+// ───── Отримуємо дефолтний колір тону з URL, якщо передано product-sku ─────
+function getDefaultFoundationColor() {
+  const sku = getProductSkuFromUrl();
+  if (!sku) return '#f3cfb3';
+  const found = foundationTones.find(t => t.sku === sku);
+  return found ? found.hex : '#f3cfb3';
+}
+
 // ────────── Основний компонент ──────────
 function App() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
+  const defaultFoundationColor = getDefaultFoundationColor();
   const latestMakeupState = useRef({
-    foundationColor: '#f3cfb3',
+    foundationColor: defaultFoundationColor,
     opacity: 0.38,
     matte: 0.75,
     lipColor: '#BD2846',
@@ -188,7 +229,8 @@ function App() {
     eyeBrightness: 0.05,
   });
 
-  const [foundationColor, setFoundationColor] = useState(latestMakeupState.current.foundationColor);
+  const [foundationColor, setFoundationColor] = useState(defaultFoundationColor);
+
   const [opacity, setOpacity] = useState(latestMakeupState.current.opacity);
   const [matte, setMatte] = useState(latestMakeupState.current.matte);
   const [lipColor, setLipColor] = useState(latestMakeupState.current.lipColor);
@@ -727,6 +769,28 @@ function App() {
   // ───── Foundation tones picker ─────
   const [showFoundationTones, setShowFoundationTones] = useState(false);
 
+  // Парсинг product-sku з URL для розділення тонів на зони
+  const productSku = getProductSkuFromUrl();
+  const toneZones = productSku ? computeToneZones(foundationTones, productSku) : null;
+
+  const renderToneZoneGrid = (tones, zoneClass) => (
+    <div className={`foundation-tones-grid ${zoneClass}`}>
+      {tones.map(tone => (
+        <button
+          key={tone.sku}
+          className={`foundation-tone-btn ${foundationColor === tone.hex ? 'selected' : ''}`}
+          onClick={() => {
+            setFoundationColor(tone.hex);
+            setShowFoundationTones(false);
+          }}
+        >
+          <span className="foundation-tone-circle" style={{ backgroundColor: tone.hex }} />
+          <span className="foundation-tone-number">{tone.number}</span>
+        </button>
+      ))}
+    </div>
+  );
+
   const foundationTonesPanel = (
     <div className="foundation-tones-overlay" onClick={() => setShowFoundationTones(false)}>
       <div className="foundation-tones-sheet" onClick={(e) => e.stopPropagation()}>
@@ -734,21 +798,44 @@ function App() {
           <h3>Тональний крем</h3>
           <button className="foundation-tones-close" onClick={() => setShowFoundationTones(false)}>✕</button>
         </div>
-        <div className="foundation-tones-grid">
-          {foundationTones.map(tone => (
-            <button
-              key={tone.sku}
-              className={`foundation-tone-btn ${foundationColor === tone.hex ? 'selected' : ''}`}
-              onClick={() => {
-                setFoundationColor(tone.hex);
-                setShowFoundationTones(false);
-              }}
-            >
-              <span className="foundation-tone-circle" style={{ backgroundColor: tone.hex }} />
-              <span className="foundation-tone-number">{tone.number}</span>
-            </button>
-          ))}
-        </div>
+        {toneZones ? (
+          <div className="foundation-tones-zones">
+            {/* Safe zone */}
+            <div className="zone-group zone-safe">
+              <div className="zone-label zone-label-safe">✅ Safe zone</div>
+              <div className="zone-desc zone-desc-safe">Тон, що ідеально підходить</div>
+              {renderToneZoneGrid(toneZones.safeZone, 'zone-grid-safe')}
+            </div>
+            {/* Green zone */}
+            <div className="zone-group zone-green">
+              <div className="zone-label zone-label-green">🟢 Green zone</div>
+              <div className="zone-desc zone-desc-green">Тони, які з великою ймовірністю підійдуть</div>
+              {renderToneZoneGrid(toneZones.greenZone, 'zone-grid-green')}
+            </div>
+            {/* Unpredictable zone */}
+            <div className="zone-group zone-unpredictable">
+              <div className="zone-label zone-label-unpredictable">🟡 Unpredictable zone</div>
+              <div className="zone-desc zone-desc-unpredictable">Тони, які можуть дати непередбачуваний результат</div>
+              {renderToneZoneGrid(toneZones.unpredictableZone, 'zone-grid-unpredictable')}
+            </div>
+          </div>
+        ) : (
+          <div className="foundation-tones-grid">
+            {foundationTones.map(tone => (
+              <button
+                key={tone.sku}
+                className={`foundation-tone-btn ${foundationColor === tone.hex ? 'selected' : ''}`}
+                onClick={() => {
+                  setFoundationColor(tone.hex);
+                  setShowFoundationTones(false);
+                }}
+              >
+                <span className="foundation-tone-circle" style={{ backgroundColor: tone.hex }} />
+                <span className="foundation-tone-number">{tone.number}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
