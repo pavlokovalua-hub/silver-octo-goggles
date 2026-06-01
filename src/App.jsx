@@ -374,7 +374,7 @@ function App() {
       fillPath(layerCtx, landmarks, FACE_OVAL, fw, fh);
       layerCtx.fill();
 
-      // Forehead extension
+      // Forehead extension (з урахуванням нахилу голови)
       if (topCenter && minX < 1 && maxX > 0 && eyebrowTopY < 1) {
         const faceWidth = maxX - minX;
         const extendRatio = 0.18;
@@ -383,18 +383,39 @@ function App() {
         const bottomY = Math.max(0, eyebrowTopY * fh - FOREHEAD_EXTEND_EYEBROW_OFFSET * fh+100);
         const topY = Math.max(0, topCenter.y * fh - fh * 0.045);
         const foreheadAlpha = Math.min(1, solidAlpha * 1.35);
-        const grad = layerCtx.createLinearGradient(0, bottomY, 0, topY);
+
+        // Обчислюємо кут нахилу голови за зовнішніми куточками очей
+        const leftEyeCorner = landmarks[33];
+        const rightEyeCorner = landmarks[263];
+        let headAngle = 0;
+        if (leftEyeCorner && rightEyeCorner) {
+          headAngle = Math.atan2(
+            rightEyeCorner.y - leftEyeCorner.y,
+            rightEyeCorner.x - leftEyeCorner.x
+          );
+        }
+
+        // Центр і розміри прямокутника для чола
+        const rectWidth = rightX - leftX;
+        const rectHeight = bottomY - topY;
+        const centerX = (leftX + rightX) / 2;
+        const centerY = (topY + bottomY) / 2;
+
+        // Градієнт у локальній системі координат (від низу до верху чола)
+        const grad = layerCtx.createLinearGradient(0, rectHeight / 2, 0, -rectHeight / 2);
         grad.addColorStop(0, `rgba(${rgbFoundation.r},${rgbFoundation.g},${rgbFoundation.b},${foreheadAlpha * 0.1})`);
         grad.addColorStop(0.5, `rgba(${rgbFoundation.r},${rgbFoundation.g},${rgbFoundation.b},${foreheadAlpha * 0.5})`);
         grad.addColorStop(1, `rgba(${rgbFoundation.r},${rgbFoundation.g},${rgbFoundation.b},${foreheadAlpha * 1})`);
+
+        layerCtx.save();
+        layerCtx.translate(centerX, centerY);
+        layerCtx.rotate(headAngle);
         layerCtx.fillStyle = grad;
         layerCtx.beginPath();
-        layerCtx.moveTo(leftX, bottomY);
-        layerCtx.lineTo(leftX, topY);
-        layerCtx.lineTo(rightX, topY);
-        layerCtx.lineTo(rightX, bottomY);
+        layerCtx.rect(-rectWidth / 2, -rectHeight / 2, rectWidth, rectHeight);
         layerCtx.closePath();
         layerCtx.fill();
+        layerCtx.restore();
       }
 
       // 2. Вирізаємо очі та рот — до блюру
