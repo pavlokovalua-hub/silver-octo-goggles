@@ -169,7 +169,7 @@ function App() {
   const canvasRef = useRef(null);
   const latestMakeupState = useRef({
     foundationColor: '#f3cfb3',
-    opacity: 0.31,
+    opacity: 0.48,
     matte: 0.09,
     lipColor: '#BD2846',
     blushColor: '#f3bebe',
@@ -182,7 +182,7 @@ function App() {
     showGloss: true,
     showLipLiner: true,
     skinSmooth: true,
-    skinSmoothStrength: 0.28,
+    skinSmoothStrength: 0.35,
     eyeBrightness: 0.05,
   });
 
@@ -378,15 +378,15 @@ function App() {
       if (topCenter && minX < 1 && maxX > 0 && eyebrowTopY < 1) {
         const faceWidth = maxX - minX;
         const extendRatio = 0.18;
-        const leftX = Math.max(0, (minX - faceWidth * extendRatio)) * fw + 57;
-        const rightX = Math.min(1, (maxX + faceWidth * extendRatio)) * fw - 57;
-        const bottomY = Math.max(0, eyebrowTopY * fh - FOREHEAD_EXTEND_EYEBROW_OFFSET * fh);
-        const topY = Math.max(0, topCenter.y * fh - fh * 0.06);
+        const leftX = Math.max(0, (minX - faceWidth * extendRatio)) * fw + 45;
+        const rightX = Math.min(1, (maxX + faceWidth * extendRatio)) * fw - 45;
+        const bottomY = Math.max(0, eyebrowTopY * fh - FOREHEAD_EXTEND_EYEBROW_OFFSET * fh+100);
+        const topY = Math.max(0, topCenter.y * fh - fh * 0.045);
         const foreheadAlpha = Math.min(1, solidAlpha * 1.35);
         const grad = layerCtx.createLinearGradient(0, bottomY, 0, topY);
         grad.addColorStop(0, `rgba(${rgbFoundation.r},${rgbFoundation.g},${rgbFoundation.b},${foreheadAlpha * 0.1})`);
         grad.addColorStop(0.5, `rgba(${rgbFoundation.r},${rgbFoundation.g},${rgbFoundation.b},${foreheadAlpha * 0.5})`);
-        grad.addColorStop(1, `rgba(${rgbFoundation.r},${rgbFoundation.g},${rgbFoundation.b},${foreheadAlpha * 0.1})`);
+        grad.addColorStop(1, `rgba(${rgbFoundation.r},${rgbFoundation.g},${rgbFoundation.b},${foreheadAlpha * 1})`);
         layerCtx.fillStyle = grad;
         layerCtx.beginPath();
         layerCtx.moveTo(leftX, bottomY);
