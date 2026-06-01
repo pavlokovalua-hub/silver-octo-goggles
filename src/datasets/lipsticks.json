@@ -1,5 +1,6 @@
 [
   {
+    "default": true,
     "sku": "212-12703",
     "background": "rgb(192, 79, 74)",
     "name": "Ariadna"

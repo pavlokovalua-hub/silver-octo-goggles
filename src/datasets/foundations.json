@@ -21,6 +21,7 @@
     },
     {
         "sku": "212-66030",
+        "default": true,
         "background": "rgb(221, 186, 151)"
     },
     {

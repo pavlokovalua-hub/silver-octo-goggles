@@ -57,25 +57,25 @@ function getLastDigits(sku) {
 const foundationTones = foundationsData.map(item => {
   const hex = rgbStrToHex(item.background);
   const number = getLastDigits(item.sku);
-  return { sku: item.sku, hex, number };
+  return { sku: item.sku, hex, number, default: item.default || false };
 });
 
 // Підготовлені дані для blush
 const blushTones = blushData.map(item => {
   const hex = rgbStrToHex(item.background);
-  return { sku: item.sku, hex, name: item.name };
+  return { sku: item.sku, hex, name: item.name, default: item.default || false };
 });
 
 // Підготовлені дані для помади
 const lipstickTones = lipsticksData.map(item => {
   const hex = rgbStrToHex(item.background);
-  return { sku: item.sku, hex, name: item.name };
+  return { sku: item.sku, hex, name: item.name, default: item.default || false };
 });
 
 // Підготовлені дані для олівця для губ
 const liplinerTones = liplinerData.map(item => {
   const hex = rgbStrToHex(item.background);
-  return { sku: item.sku, hex, name: item.name };
+  return { sku: item.sku, hex, name: item.name, default: item.default || false };
 });
 
 // ───── Парсинг URL-параметрів foundation/blush/lipstick/lipliner-product-sku ─────
@@ -233,33 +233,46 @@ function punchOutEyesMouth(ctx, landmarks, fw, fh) {
   ctx.restore();
 }
 
-// ───── Отримуємо дефолтний колір тону з URL, якщо передано foundation/blush product-sku ─────
+// ───── Отримуємо дефолтний колір тону з URL або default:true ─────
 function getDefaultFoundationColor() {
   const sku = getProductSkuFromUrl();
-  if (!sku) return '#f3cfb3';
-  const found = foundationTones.find(t => t.sku === sku);
-  return found ? found.hex : '#f3cfb3';
+  if (sku) {
+    const found = foundationTones.find(t => t.sku === sku);
+    if (found) return found.hex;
+  }
+  // Беремо default, якщо позначено, або перший тон
+  const def = foundationTones.find(t => t.default);
+  return def ? def.hex : foundationTones[0]?.hex || '#f3cfb3';
 }
 
 function getDefaultBlushColor() {
   const sku = getBlushProductSkuFromUrl();
-  if (!sku) return '#f3bebe';
-  const found = blushTones.find(t => t.sku === sku);
-  return found ? found.hex : '#f3bebe';
+  if (sku) {
+    const found = blushTones.find(t => t.sku === sku);
+    if (found) return found.hex;
+  }
+  const def = blushTones.find(t => t.default);
+  return def ? def.hex : blushTones[0]?.hex || '#f3bebe';
 }
 
 function getDefaultLipstickColor() {
   const sku = getLipstickProductSkuFromUrl();
-  if (!sku) return '#BD2846';
-  const found = lipstickTones.find(t => t.sku === sku);
-  return found ? found.hex : '#BD2846';
+  if (sku) {
+    const found = lipstickTones.find(t => t.sku === sku);
+    if (found) return found.hex;
+  }
+  const def = lipstickTones.find(t => t.default);
+  return def ? def.hex : lipstickTones[0]?.hex || '#BD2846';
 }
 
 function getDefaultLiplinerColor() {
   const sku = getLiplinerProductSkuFromUrl();
-  if (!sku) return '#390404';
-  const found = liplinerTones.find(t => t.sku === sku);
-  return found ? found.hex : '#390404';
+  if (sku) {
+    const found = liplinerTones.find(t => t.sku === sku);
+    if (found) return found.hex;
+  }
+  const def = liplinerTones.find(t => t.default);
+  return def ? def.hex : liplinerTones[0]?.hex || '#390404';
 }
 
 // ────────── Основний компонент ──────────
@@ -344,7 +357,7 @@ function App() {
         }
       });
     }
-    return () => {};
+    return () => { };
   }, []);
 
   useEffect(() => {
@@ -607,19 +620,96 @@ function App() {
 
 
     // ============================================================
-    // LIP LINER
+    // LIP LINER — градієнтна смуга назовні від контуру губ
     // ============================================================
     if (showLipLiner && rgbLipLiner) {
       ctx.save();
-      ctx.strokeStyle = `rgba(${rgbLipLiner.r},${rgbLipLiner.g},${rgbLipLiner.b},0.5)`;
-      ctx.lineWidth = Math.max(3, Math.round(fw * 0.004));
+
+      const linerBandWidth = Math.max(5, fw * 0.013);
+      const softAlpha = 0.55;
+
+      // ⬇️ ДОДАЄМО multiply — тепер олівець буде наноситися пігментно
+      ctx.globalCompositeOperation = 'multiply';
+
+      // ── Upper lip ──
+      const upperPts = LIPS_UPPER_BORDER_OUTER;
+      let upperBottomY = 0;
+      let upperTopY = 1;
+      for (const idx of upperPts) {
+        const pt = landmarks[idx];
+        if (pt) {
+          if (pt.y > upperBottomY) upperBottomY = pt.y;
+          if (pt.y < upperTopY) upperTopY = pt.y;
+        }
+      }
+
+      ctx.beginPath();
+      for (let i = 0; i < upperPts.length; i++) {
+        const pt = landmarks[upperPts[i]];
+        if (!pt) continue;
+        if (i === 0) ctx.moveTo(pt.x * fw, pt.y * fh);
+        else ctx.lineTo(pt.x * fw, pt.y * fh);
+      }
+      for (let i = upperPts.length - 1; i >= 0; i--) {
+        const pt = landmarks[upperPts[i]];
+        if (!pt) continue;
+        ctx.lineTo(pt.x * fw, (pt.y * fh) - linerBandWidth);
+      }
+      ctx.closePath();
+
+      const upperGrad = ctx.createLinearGradient(0, upperBottomY * fh, 0, (upperTopY * fh) - linerBandWidth);
+      upperGrad.addColorStop(0, `rgba(${rgbLipLiner.r},${rgbLipLiner.g},${rgbLipLiner.b},0)`);
+      upperGrad.addColorStop(0.25, `rgba(${rgbLipLiner.r},${rgbLipLiner.g},${rgbLipLiner.b},${softAlpha * 0.15})`);
+      upperGrad.addColorStop(0.6, `rgba(${rgbLipLiner.r},${rgbLipLiner.g},${rgbLipLiner.b},${softAlpha * 0.5})`);
+      upperGrad.addColorStop(1, `rgba(${rgbLipLiner.r},${rgbLipLiner.g},${rgbLipLiner.b},${softAlpha})`);
+      ctx.fillStyle = upperGrad;
+      ctx.fill();
+
+      // ── Lower lip ──
+      const lowerPts = LIPS_LOWER_BORDER_OUTER;
+      let lowerTopY = 1;
+      let lowerBottomY = 0;
+      for (const idx of lowerPts) {
+        const pt = landmarks[idx];
+        if (pt) {
+          if (pt.y < lowerTopY) lowerTopY = pt.y;
+          if (pt.y > lowerBottomY) lowerBottomY = pt.y;
+        }
+      }
+
+      ctx.beginPath();
+      for (let i = 0; i < lowerPts.length; i++) {
+        const pt = landmarks[lowerPts[i]];
+        if (!pt) continue;
+        if (i === 0) ctx.moveTo(pt.x * fw, pt.y * fh);
+        else ctx.lineTo(pt.x * fw, pt.y * fh);
+      }
+      for (let i = lowerPts.length - 1; i >= 0; i--) {
+        const pt = landmarks[lowerPts[i]];
+        if (!pt) continue;
+        ctx.lineTo(pt.x * fw, (pt.y * fh) + linerBandWidth);
+      }
+      ctx.closePath();
+
+      const lowerGrad = ctx.createLinearGradient(0, lowerTopY * fh, 0, (lowerBottomY * fh) + linerBandWidth);
+      lowerGrad.addColorStop(0, `rgba(${rgbLipLiner.r},${rgbLipLiner.g},${rgbLipLiner.b},0)`);
+      lowerGrad.addColorStop(0.25, `rgba(${rgbLipLiner.r},${rgbLipLiner.g},${rgbLipLiner.b},${softAlpha * 0.15})`);
+      lowerGrad.addColorStop(0.6, `rgba(${rgbLipLiner.r},${rgbLipLiner.g},${rgbLipLiner.b},${softAlpha * 0.5})`);
+      lowerGrad.addColorStop(1, `rgba(${rgbLipLiner.r},${rgbLipLiner.g},${rgbLipLiner.b},${softAlpha})`);
+      ctx.fillStyle = lowerGrad;
+      ctx.fill();
+
+      // ── Контурний штрих ──
+      ctx.strokeStyle = `rgba(${rgbLipLiner.r},${rgbLipLiner.g},${rgbLipLiner.b},0.35)`;
+      ctx.lineWidth = Math.max(1.5, fw * 0.003);
       ctx.lineJoin = 'round';
       ctx.lineCap = 'round';
       strokePath(ctx, landmarks, LIPS_UPPER_BORDER_OUTER, fw, fh);
       ctx.stroke();
       strokePath(ctx, landmarks, LIPS_LOWER_BORDER_OUTER, fw, fh);
       ctx.stroke();
-      ctx.restore();
+
+      ctx.restore(); // multiply зніметься разом із save/restore
     }
 
     // ============================================================
