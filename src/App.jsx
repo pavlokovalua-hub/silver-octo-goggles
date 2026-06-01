@@ -385,20 +385,19 @@ function App() {
       if (eyebrowTopY < 1) {
         const leftBrowEdge = landmarks[46];
         const rightBrowEdge = landmarks[276];
-        const leftBrowBottom = landmarks[52];
-        const rightBrowBottom = landmarks[282];
+        const leftEyeCorner = landmarks[33];
+        const rightEyeCorner = landmarks[263];
 
-        if (leftBrowEdge && rightBrowEdge && leftBrowBottom && rightBrowBottom) {
+        if (leftBrowEdge && rightBrowEdge && leftEyeCorner && rightEyeCorner) {
           const faceHeight = ovalMaxY - ovalMinY;
           const leftX = leftBrowEdge.x * fw - 10;
           const rightX = rightBrowEdge.x * fw + 10;
-          const browBottomY = Math.max(leftBrowBottom.y, rightBrowBottom.y) * fh;
-          const startY = Math.min(fh, browBottomY + faceHeight * fh * 0.02)-5;
+          // Нижня межа прив'язана до рівня очей (не брів!) — стабільно
+          const eyeMidY = (leftEyeCorner.y + rightEyeCorner.y) / 2;
+          const startY = Math.min(fh, (eyeMidY - 0.04) * fh);
           const hairlineY = Math.max(0, startY - faceHeight * fh * 0.35);
 
-          // Кут нахилу голови за зовнішніми куточками очей (заперечено для selfie)
-          const leftEyeCorner = landmarks[33];
-          const rightEyeCorner = landmarks[263];
+          // Кут нахилу голови за зовнішніми куточками очей
           let headAngle = 0;
           if (leftEyeCorner && rightEyeCorner) {
             headAngle = Math.atan2(
@@ -423,9 +422,14 @@ function App() {
           layerCtx.translate(centerX, centerY);
           layerCtx.rotate(headAngle);
           layerCtx.fillStyle = grad;
-          layerCtx.beginPath();
-          layerCtx.rect(-rectWidth / 2, -rectHeight / 2, rectWidth, rectHeight);
-          layerCtx.closePath();
+          const borderRadius = rectWidth * 0.35;
+          layerCtx.roundRect(
+            -rectWidth / 2,
+            -rectHeight / 2,
+            rectWidth,
+            rectHeight,
+            [borderRadius, borderRadius, 0, 0]
+          );
           layerCtx.fill();
           layerCtx.restore();
         }
