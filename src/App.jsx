@@ -3,6 +3,8 @@ import { FaceMesh } from '@mediapipe/face_mesh';
 import * as cam from '@mediapipe/camera_utils';
 import { applySkinSmoothing } from './skinSmoothing';
 import foundationsData from './datasets/foundations.json';
+import blushData from './datasets/blush.json';
+import lipsticksData from './datasets/lipsticks.json';
 
 const FOREHEAD_EXTEND_EYEBROW_OFFSET = 0.01;
 
@@ -57,10 +59,32 @@ const foundationTones = foundationsData.map(item => {
   return { sku: item.sku, hex, number };
 });
 
-// ───── Парсинг URL-параметра product-sku ─────
+// Підготовлені дані для blush
+const blushTones = blushData.map(item => {
+  const hex = rgbStrToHex(item.background);
+  return { sku: item.sku, hex, name: item.name };
+});
+
+// Підготовлені дані для помади
+const lipstickTones = lipsticksData.map(item => {
+  const hex = rgbStrToHex(item.background);
+  return { sku: item.sku, hex, name: item.name };
+});
+
+// ───── Парсинг URL-параметрів foundation/blush/lipstick-product-sku ─────
 function getProductSkuFromUrl() {
   const params = new URLSearchParams(window.location.search);
-  return params.get('product-sku');
+  return params.get('foundation-product-sku');
+}
+
+function getBlushProductSkuFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('blush-product-sku');
+}
+
+function getLipstickProductSkuFromUrl() {
+  const params = new URLSearchParams(window.location.search);
+  return params.get('lipstick-product-sku');
 }
 
 // ───── Розділення тонів на зони, якщо передано product-sku ─────
@@ -197,7 +221,7 @@ function punchOutEyesMouth(ctx, landmarks, fw, fh) {
   ctx.restore();
 }
 
-// ───── Отримуємо дефолтний колір тону з URL, якщо передано product-sku ─────
+// ───── Отримуємо дефолтний колір тону з URL, якщо передано foundation/blush product-sku ─────
 function getDefaultFoundationColor() {
   const sku = getProductSkuFromUrl();
   if (!sku) return '#f3cfb3';
@@ -205,17 +229,33 @@ function getDefaultFoundationColor() {
   return found ? found.hex : '#f3cfb3';
 }
 
+function getDefaultBlushColor() {
+  const sku = getBlushProductSkuFromUrl();
+  if (!sku) return '#f3bebe';
+  const found = blushTones.find(t => t.sku === sku);
+  return found ? found.hex : '#f3bebe';
+}
+
+function getDefaultLipstickColor() {
+  const sku = getLipstickProductSkuFromUrl();
+  if (!sku) return '#BD2846';
+  const found = lipstickTones.find(t => t.sku === sku);
+  return found ? found.hex : '#BD2846';
+}
+
 // ────────── Основний компонент ──────────
 function App() {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const defaultFoundationColor = getDefaultFoundationColor();
+  const defaultBlushColor = getDefaultBlushColor();
+  const defaultLipstickColor = getDefaultLipstickColor();
   const latestMakeupState = useRef({
     foundationColor: defaultFoundationColor,
     opacity: 0.38,
     matte: 0.75,
-    lipColor: '#BD2846',
-    blushColor: '#f3bebe',
+    lipColor: defaultLipstickColor,
+    blushColor: defaultBlushColor,
     lipGlossColor: '#310606',
     lipGlossOpacity: 0.19,
     lipLinerColor: '#390404',
@@ -766,12 +806,18 @@ function App() {
     </>
   );
 
-  // ───── Foundation tones picker ─────
+  // ───── Foundation / Blush / Lipstick tones picker ─────
   const [showFoundationTones, setShowFoundationTones] = useState(false);
+  const [showBlushTones, setShowBlushTones] = useState(false);
+  const [showLipstickTones, setShowLipstickTones] = useState(false);
 
   // Парсинг product-sku з URL для розділення тонів на зони
   const productSku = getProductSkuFromUrl();
+  const blushProductSku = getBlushProductSkuFromUrl();
+  const lipstickProductSku = getLipstickProductSkuFromUrl();
   const toneZones = productSku ? computeToneZones(foundationTones, productSku) : null;
+  const blushZones = blushProductSku ? computeToneZones(blushTones, blushProductSku) : null;
+  const lipstickZones = lipstickProductSku ? computeToneZones(lipstickTones, lipstickProductSku) : null;
 
   const renderToneZoneGrid = (tones, zoneClass) => (
     <div className={`foundation-tones-grid ${zoneClass}`}>
@@ -840,6 +886,142 @@ function App() {
     </div>
   );
 
+  const renderBlushZoneGrid = (tones, zoneClass) => (
+    <div className={`foundation-tones-grid ${zoneClass}`}>
+      {tones.map(tone => (
+        <button
+          key={tone.sku}
+          className={`foundation-tone-btn ${blushColor === tone.hex ? 'selected' : ''}`}
+          onClick={() => {
+            setBlushColor(tone.hex);
+            setShowBlushTones(false);
+          }}
+        >
+          <span className="foundation-tone-circle" style={{ backgroundColor: tone.hex }} />
+          <span className="foundation-tone-number">{tone.name}</span>
+        </button>
+      ))}
+    </div>
+  );
+
+  // ───── Blush tones picker ─────
+  const blushTonesPanel = (
+    <div className="foundation-tones-overlay" onClick={() => setShowBlushTones(false)}>
+      <div className="foundation-tones-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="foundation-tones-header">
+          <h3>Рум'яна</h3>
+          <button className="foundation-tones-close" onClick={() => setShowBlushTones(false)}>✕</button>
+        </div>
+        {blushZones ? (
+          <div className="foundation-tones-zones">
+            {/* Safe zone */}
+            <div className="zone-group zone-safe">
+              <div className="zone-label zone-label-safe">✅ Safe zone</div>
+              <div className="zone-desc zone-desc-safe">Тон, що ідеально підходить</div>
+              {renderBlushZoneGrid(blushZones.safeZone, 'zone-grid-safe')}
+            </div>
+            {/* Green zone */}
+            <div className="zone-group zone-green">
+              <div className="zone-label zone-label-green">🟢 Green zone</div>
+              <div className="zone-desc zone-desc-green">Тони, які з великою ймовірністю підійдуть</div>
+              {renderBlushZoneGrid(blushZones.greenZone, 'zone-grid-green')}
+            </div>
+            {/* Unpredictable zone */}
+            <div className="zone-group zone-unpredictable">
+              <div className="zone-label zone-label-unpredictable">🟡 Unpredictable zone</div>
+              <div className="zone-desc zone-desc-unpredictable">Тони, які можуть дати непередбачуваний результат</div>
+              {renderBlushZoneGrid(blushZones.unpredictableZone, 'zone-grid-unpredictable')}
+            </div>
+          </div>
+        ) : (
+          <div className="foundation-tones-grid">
+            {blushTones.map(tone => (
+              <button
+                key={tone.sku}
+                className={`foundation-tone-btn ${blushColor === tone.hex ? 'selected' : ''}`}
+                onClick={() => {
+                  setBlushColor(tone.hex);
+                  setShowBlushTones(false);
+                }}
+              >
+                <span className="foundation-tone-circle" style={{ backgroundColor: tone.hex }} />
+                <span className="foundation-tone-number">{tone.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
+  const renderLipstickZoneGrid = (tones, zoneClass) => (
+    <div className={`foundation-tones-grid ${zoneClass}`}>
+      {tones.map(tone => (
+        <button
+          key={tone.sku}
+          className={`foundation-tone-btn ${lipColor === tone.hex ? 'selected' : ''}`}
+          onClick={() => {
+            setLipColor(tone.hex);
+            setShowLipstickTones(false);
+          }}
+        >
+          <span className="foundation-tone-circle" style={{ backgroundColor: tone.hex }} />
+          <span className="foundation-tone-number">{tone.name}</span>
+        </button>
+      ))}
+    </div>
+  );
+
+  // ───── Lipstick tones picker ─────
+  const lipstickTonesPanel = (
+    <div className="foundation-tones-overlay" onClick={() => setShowLipstickTones(false)}>
+      <div className="foundation-tones-sheet" onClick={(e) => e.stopPropagation()}>
+        <div className="foundation-tones-header">
+          <h3>Помада</h3>
+          <button className="foundation-tones-close" onClick={() => setShowLipstickTones(false)}>✕</button>
+        </div>
+        {lipstickZones ? (
+          <div className="foundation-tones-zones">
+            {/* Safe zone */}
+            <div className="zone-group zone-safe">
+              <div className="zone-label zone-label-safe">✅ Safe zone</div>
+              <div className="zone-desc zone-desc-safe">Тон, що ідеально підходить</div>
+              {renderLipstickZoneGrid(lipstickZones.safeZone, 'zone-grid-safe')}
+            </div>
+            {/* Green zone */}
+            <div className="zone-group zone-green">
+              <div className="zone-label zone-label-green">🟢 Green zone</div>
+              <div className="zone-desc zone-desc-green">Тони, які з великою ймовірністю підійдуть</div>
+              {renderLipstickZoneGrid(lipstickZones.greenZone, 'zone-grid-green')}
+            </div>
+            {/* Unpredictable zone */}
+            <div className="zone-group zone-unpredictable">
+              <div className="zone-label zone-label-unpredictable">🟡 Unpredictable zone</div>
+              <div className="zone-desc zone-desc-unpredictable">Тони, які можуть дати непередбачуваний результат</div>
+              {renderLipstickZoneGrid(lipstickZones.unpredictableZone, 'zone-grid-unpredictable')}
+            </div>
+          </div>
+        ) : (
+          <div className="foundation-tones-grid">
+            {lipstickTones.map(tone => (
+              <button
+                key={tone.sku}
+                className={`foundation-tone-btn ${lipColor === tone.hex ? 'selected' : ''}`}
+                onClick={() => {
+                  setLipColor(tone.hex);
+                  setShowLipstickTones(false);
+                }}
+              >
+                <span className="foundation-tone-circle" style={{ backgroundColor: tone.hex }} />
+                <span className="foundation-tone-number">{tone.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+
   const pickerMeta = {
     foundation: { title: 'Тональний крем', currentColor: foundationColor, setColor: setFoundationColor, swatches: ['#f3cfb3', '#e4b38d', '#d3a17e', '#c68e65', '#8d5524', '#5c381a', '#3e2211', '#f5e0cc'], show: showFoundation, toggle: () => setShowFoundation(v => !v) },
     blush: { title: "Рум'яна", currentColor: blushColor, setColor: setBlushColor, swatches: ['#FF9999', '#FFCCCC', '#F08080', '#CD5C5C', '#E9967A', '#FFA07A', '#FFB6C1', '#FF69B4'], show: showBlush, toggle: () => setShowBlush(v => !v) },
@@ -888,11 +1070,11 @@ function App() {
               <span className="color-btn-label">Foundation</span>
             </div>
             <div className="color-btn-wrapper">
-              <button className={`color-btn color-btn-blush ${activeColorPicker === 'blush' ? 'active' : ''}`} style={{ border: `5px solid ${blushColor}` }} onClick={() => setActiveColorPicker(activeColorPicker === 'blush' ? null : 'blush')} />
+              <button className={`color-btn color-btn-blush ${showBlushTones ? 'active' : ''}`} style={{ border: `5px solid ${blushColor}` }} onClick={() => setShowBlushTones(true)} />
               <span className="color-btn-label">Blush</span>
             </div>
             <div className="color-btn-wrapper">
-              <button className={`color-btn color-btn-lip ${activeColorPicker === 'lip' ? 'active' : ''}`} style={{ border: `5px solid ${lipColor}` }} onClick={() => setActiveColorPicker(activeColorPicker === 'lip' ? null : 'lip')} />
+              <button className={`color-btn color-btn-lip ${showLipstickTones ? 'active' : ''}`} style={{ border: `5px solid ${lipColor}` }} onClick={() => setShowLipstickTones(true)} />
               <span className="color-btn-label">Lipstick</span>
             </div>
             <div className="color-btn-wrapper">
@@ -903,6 +1085,8 @@ function App() {
         </div>
         {activeColorPicker && activeColorPicker !== 'foundation' && colorPickerOverlay}
         {showFoundationTones && foundationTonesPanel}
+        {showBlushTones && blushTonesPanel}
+        {showLipstickTones && lipstickTonesPanel}
       </div>
     );
   }
