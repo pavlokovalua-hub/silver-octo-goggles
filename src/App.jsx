@@ -27,8 +27,9 @@ const RIGHT_IRIS = [473, 474, 475, 476, 477];
 // Внутрішній контур рота (простір між губами — зуби, порожнина рота)
 const MOUTH_INTERIOR = [78, 191, 80, 81, 82, 13, 312, 311, 310, 415, 308, 324, 318, 402, 317, 14, 87, 178, 88, 95, 78];
 const ALL_BROWS = [...LEFT_EYEBROW, ...RIGHT_EYEBROW];
-// Вирізається ТІЛЬКИ: очі (щоб не фарбувались) і внутрішня частина рота (зуби/порожнина).
-// Брови та губи мають бути в тоні шкіри.
+// Вирізається: очі (щоб не фарбувались), внутрішня частина рота (зуби/порожнина).
+// Губи НЕ вирізаються — тональник може покривати їх, помада наноситься зверху
+// через source-over (повністю перекриває тональник на губах).
 const CUTOUT_GROUPS = [
   LEFT_EYE, RIGHT_EYE,
   LEFT_IRIS, RIGHT_IRIS,
@@ -138,7 +139,8 @@ function ensureLayerCanvas(ref, w, h) {
 }
 
 // Вирізає очі та внутрішню частину рота (зуби/порожнину) з шару тональника.
-// Брови та губи НЕ вирізаються — вони мають бути в тоні шкіри.
+// Губи НЕ вирізаються — тональник покриває всю шкіру включно з ділянкою навколо губ,
+// а помада наноситься зверху через source-over (повністю перекриває тональник на губах).
 function punchOutEyesMouth(ctx, landmarks, fw, fh) {
   ctx.save();
   ctx.globalCompositeOperation = 'destination-out';
@@ -169,8 +171,8 @@ function App() {
   const canvasRef = useRef(null);
   const latestMakeupState = useRef({
     foundationColor: '#f3cfb3',
-    opacity: 0.48,
-    matte: 0.09,
+    opacity: 0.38,
+    matte: 0.75,
     lipColor: '#BD2846',
     blushColor: '#f3bebe',
     lipGlossColor: '#310606',
@@ -182,7 +184,7 @@ function App() {
     showGloss: true,
     showLipLiner: true,
     skinSmooth: true,
-    skinSmoothStrength: 0.35,
+    skinSmoothStrength: 0.31,
     eyeBrightness: 0.05,
   });
 
