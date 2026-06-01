@@ -31,7 +31,6 @@ const ALL_BROWS = [...LEFT_EYEBROW, ...RIGHT_EYEBROW];
 // верхня та нижня губа — тональник не має зафарбовувати губи.
 const CUTOUT_GROUPS = [
   LEFT_EYE, RIGHT_EYE,
-  LEFT_IRIS, RIGHT_IRIS,
   MOUTH_INTERIOR,
   LIPS_UPPER_OUTER,
   LIPS_LOWER_OUTER,
