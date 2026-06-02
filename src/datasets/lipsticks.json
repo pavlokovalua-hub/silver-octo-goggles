@@ -1,6 +1,5 @@
 [
   {
-    "default": true,
     "sku": "212-12703",
     "background": "rgb(192, 79, 74)",
     "name": "Ariadna"
@@ -52,6 +51,7 @@
   },
   {
     "sku": "212-12708",
+    "default": true,
     "background": "rgb(174, 82, 72)",
     "name": "Elwa"
   },

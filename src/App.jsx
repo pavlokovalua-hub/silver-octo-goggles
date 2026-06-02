@@ -9,20 +9,27 @@ import liplinerData from './datasets/lipliner.json';
 
 const FOREHEAD_EXTEND_EYEBROW_OFFSET = 0.01;
 
+// ─────── Temporal landmark smoothing (low-pass filter for jitter reduction) ───────
+// Експоненційне ковзне середнє (EWMA) для усунення тремтіння лендмарків між кадрами.
+// Lower alpha = smoother but more lag; higher alpha = more responsive but more jitter
+const LANDMARK_SMOOTHING_ALPHA = 0.5;
+
 // ─────── Модульні константи (лендмарки) ───────
 const FACE_OVAL = [
   10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288,
   397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136,
   172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109,
 ];
-const LIPS_UPPER_OUTER = [61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291, 308, 415, 310, 311, 312, 13, 82, 81, 80, 191, 78];
-const LIPS_LOWER_OUTER = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 308, 324, 318, 402, 317, 14, 87, 178, 88, 95, 78];
+const LIPS_UPPER_OUTER = [61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291];
+const LIPS_LOWER_OUTER = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291];
+const LIPS_UPPER = [61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291, 308, 415, 310, 311, 312, 13, 82, 81, 80, 191, 78];
+const LIPS_LOWER = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 308, 324, 318, 402, 317, 14, 87, 178, 88, 95, 78];
 const LIPS_UPPER_BORDER_OUTER = [61, 185, 40, 39, 37, 0, 267, 269, 270, 409, 291, 409, 270, 269, 267, 0, 37, 39, 40, 185, 61];
 const LIPS_LOWER_BORDER_OUTER = [61, 146, 91, 181, 84, 17, 314, 405, 321, 375, 291, 375, 321, 405, 314, 17, 84, 181, 91, 146, 61];
 const LEFT_EYE = [33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246];
 const RIGHT_EYE = [263, 249, 390, 373, 374, 380, 381, 382, 362, 398, 384, 385, 386, 387, 388, 466];
 const LEFT_EYEBROW = [70, 63, 105, 66, 107, 55, 65, 52, 53, 46];
-const RIGHT_EYEBROW = [336, 296, 334, 293, 300, 285, 295, 282, 283, 276];
+const RIGHT_EYEBROW = [300, 293, 334, 296, 336, 285, 295, 282, 283, 276];
 const BLUSH_LEFT = [116, 117, 118, 119, 120, 121, 128, 50, 205, 49, 110, 203, 204];
 const BLUSH_RIGHT = [345, 346, 347, 348, 349, 350, 357, 280, 425, 279, 339, 423, 424];
 const LEFT_IRIS = [468, 469, 470, 471, 472];
@@ -214,7 +221,7 @@ function punchOutEyesMouth(ctx, landmarks, fw, fh) {
   ctx.globalCompositeOperation = 'destination-out';
   ctx.fillStyle = 'rgba(0,0,0,1)';
   ctx.strokeStyle = 'rgba(0,0,0,1)';
-  ctx.lineWidth = 6;
+  ctx.lineWidth = 2;
   ctx.lineJoin = 'round';
   ctx.lineCap = 'round';
 
@@ -325,6 +332,49 @@ function App() {
   const latestLandmarksRef = useRef(null);
   const layerCanvasRef = useRef(null);
   const matteCanvasRef = useRef(null);
+  const smoothedLandmarksRef = useRef(null);
+  const isFirstFrameRef = useRef(true);
+
+  // ───── Temporal smoothing for landmarks (low-pass filter / EWMA) ─────
+  // Застосовує експоненційне ковзне середнє до кожного лендмарку,
+  // щоб усунути тремтіння від кадру до кадру: smoothed = prev + alpha * (raw - prev)
+  function smoothLandmarks(rawLandmarks) {
+    if (isFirstFrameRef.current || !smoothedLandmarksRef.current) {
+      // Перший кадр — копіюємо як є
+      smoothedLandmarksRef.current = rawLandmarks.map(lm => ({ x: lm.x, y: lm.y, z: lm.z }));
+      isFirstFrameRef.current = false;
+      return smoothedLandmarksRef.current;
+    }
+
+    const prev = smoothedLandmarksRef.current;
+    const alpha = LANDMARK_SMOOTHING_ALPHA;
+    const oneMinusAlpha = 1 - alpha;
+
+    for (let i = 0; i < rawLandmarks.length; i++) {
+      prev[i].x = prev[i].x * oneMinusAlpha + rawLandmarks[i].x * alpha;
+      prev[i].y = prev[i].y * oneMinusAlpha + rawLandmarks[i].y * alpha;
+      if (rawLandmarks[i].z !== undefined) {
+        prev[i].z = prev[i].z * oneMinusAlpha + rawLandmarks[i].z * alpha;
+      }
+    }
+    return prev;
+  }
+
+  // ───── Скидання згладжування при виявленні різкого стрибка голови ─────
+  function detectAndResetOnJump(rawLandmarks) {
+    if (!smoothedLandmarksRef.current || rawLandmarks.length < 2) return false;
+    const prev = smoothedLandmarksRef.current;
+    // Використовуємо центр носа (landmark 1) як стабільний орієнтир
+    const dx = rawLandmarks[1].x - prev[1].x;
+    const dy = rawLandmarks[1].y - prev[1].y;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+    // Якщо стрибок > 12% — це реальний рух, а не шум → скидаємо фільтр
+    if (dist > 0.12) {
+      isFirstFrameRef.current = true;
+      return true;
+    }
+    return false;
+  }
 
   useEffect(() => {
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -432,9 +482,12 @@ function App() {
     canvasCtx.clearRect(0, 0, width, height);
     canvasCtx.drawImage(videoRef.current, 0, 0, width, height);
     if (results.multiFaceLandmarks) {
-      for (const landmarks of results.multiFaceLandmarks) {
-        latestLandmarksRef.current = landmarks;
-        drawMakeup(canvasCtx, landmarks, state, width, height);
+      for (const rawLandmarks of results.multiFaceLandmarks) {
+        // ── Застосовуємо темпоральне згладжування лендмарків ──
+        detectAndResetOnJump(rawLandmarks);
+        const smoothed = smoothLandmarks(rawLandmarks);
+        latestLandmarksRef.current = smoothed;
+        drawMakeup(canvasCtx, smoothed, state, width, height);
       }
     }
     frameCounterRef.current++;
@@ -603,14 +656,14 @@ function App() {
     // ============================================================
     if (showLip && rgbLip) {
       ctx.save();
-      fillPath(ctx, landmarks, LIPS_LOWER_OUTER, fw, fh);
+      fillPath(ctx, landmarks, LIPS_LOWER, fw, fh);
       ctx.clip('evenodd');
       ctx.globalCompositeOperation = 'multiply';
       ctx.fillStyle = `rgba(${rgbLip.r},${rgbLip.g},${rgbLip.b},0.7)`;
       ctx.fillRect(0, 0, fw, fh);
       ctx.restore();
       ctx.save();
-      fillPath(ctx, landmarks, LIPS_UPPER_OUTER, fw, fh);
+      fillPath(ctx, landmarks, LIPS_UPPER, fw, fh);
       ctx.clip('evenodd');
       ctx.globalCompositeOperation = 'multiply';
       ctx.fillStyle = `rgba(${rgbLip.r},${rgbLip.g},${rgbLip.b},0.7)`;
@@ -756,7 +809,7 @@ function App() {
           ctx.fillRect(0, 0, fw, fh);
         };
         ctx.save();
-        fillPath(ctx, landmarks, LIPS_LOWER_OUTER, fw, fh);
+        fillPath(ctx, landmarks, LIPS_LOWER, fw, fh);
         ctx.clip('evenodd');
         const lipCenter = landmarks[14];
         if (lipCenter) {
@@ -771,7 +824,7 @@ function App() {
           Math.max(0, lipSide2.y * fh - fw * 0.01), fw * 0.035, specStrength * 0.35);
         ctx.restore();
         ctx.save();
-        fillPath(ctx, landmarks, LIPS_UPPER_OUTER, fw, fh);
+        fillPath(ctx, landmarks, LIPS_UPPER, fw, fh);
         ctx.clip('evenodd');
         const upperLipCenter = landmarks[0];
         if (upperLipCenter) drawSpecular(upperLipCenter.x * fw + (0.5 - motionPhase) * fw * 0.03,
