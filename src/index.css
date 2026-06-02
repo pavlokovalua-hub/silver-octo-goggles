@@ -521,6 +521,12 @@ video, canvas {
   transition: background-color 0.15s ease;
 }
 
+.foundation-tones-disable.active {
+  background: #dc2626;
+  color: #ffffff;
+  box-shadow: 0 0 0 2px #dc2626, 0 0 8px rgba(220, 38, 38, 0.5);
+}
+
 .foundation-tones-disable:active {
   background: #4b5563;
 }

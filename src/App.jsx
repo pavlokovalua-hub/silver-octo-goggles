@@ -995,6 +995,7 @@ function App() {
           className={`foundation-tone-btn ${foundationColor === tone.hex ? 'selected' : ''}`}
           onClick={() => {
             setFoundationColor(tone.hex);
+            setShowFoundation(true);
             setShowFoundationTones(false);
           }}
         >
@@ -1011,7 +1012,7 @@ function App() {
         <div className="foundation-tones-header">
           <h3>Тональний крем</h3>
           <div className="foundation-tones-actions">
-            <button className="foundation-tones-disable" title="Вимкнути шар" onClick={() => { setShowFoundation(false); setShowFoundationTones(false); }}>
+            <button className={`foundation-tones-disable ${showFoundation ? '' : 'active'}`} title="Вимкнути шар" onClick={() => { setFoundationColor(''); setShowFoundation(false); setShowFoundationTones(false); }}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <circle cx="10" cy="10" r="8" />
                 <line x1="5" y1="5" x2="15" y2="15" />
@@ -1049,6 +1050,7 @@ function App() {
                 className={`foundation-tone-btn ${foundationColor === tone.hex ? 'selected' : ''}`}
                 onClick={() => {
                   setFoundationColor(tone.hex);
+                  setShowFoundation(true);
                   setShowFoundationTones(false);
                 }}
               >
@@ -1070,6 +1072,7 @@ function App() {
           className={`foundation-tone-btn ${blushColor === tone.hex ? 'selected' : ''}`}
           onClick={() => {
             setBlushColor(tone.hex);
+            setShowBlush(true);
             setShowBlushTones(false);
           }}
         >
@@ -1087,7 +1090,7 @@ function App() {
         <div className="foundation-tones-header">
           <h3>Рум'яна</h3>
           <div className="foundation-tones-actions">
-            <button className="foundation-tones-disable" title="Вимкнути шар" onClick={() => { setShowBlush(false); setShowBlushTones(false); }}>
+            <button className={`foundation-tones-disable ${showBlush ? '' : 'active'}`} title="Вимкнути шар" onClick={() => { setBlushColor(''); setShowBlush(false); setShowBlushTones(false); }}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <circle cx="10" cy="10" r="8" />
                 <line x1="5" y1="5" x2="15" y2="15" />
@@ -1125,6 +1128,7 @@ function App() {
                 className={`foundation-tone-btn ${blushColor === tone.hex ? 'selected' : ''}`}
                 onClick={() => {
                   setBlushColor(tone.hex);
+                  setShowBlush(true);
                   setShowBlushTones(false);
                 }}
               >
@@ -1146,6 +1150,7 @@ function App() {
           className={`foundation-tone-btn ${lipColor === tone.hex ? 'selected' : ''}`}
           onClick={() => {
             setLipColor(tone.hex);
+            setShowLip(true);
             setShowLipstickTones(false);
           }}
         >
@@ -1163,7 +1168,7 @@ function App() {
         <div className="foundation-tones-header">
           <h3>Помада</h3>
           <div className="foundation-tones-actions">
-            <button className="foundation-tones-disable" title="Вимкнути шар" onClick={() => { setShowLip(false); setShowLipstickTones(false); }}>
+            <button className={`foundation-tones-disable ${showLip ? '' : 'active'}`} title="Вимкнути шар" onClick={() => { setLipColor(''); setShowLip(false); setShowLipstickTones(false); }}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <circle cx="10" cy="10" r="8" />
                 <line x1="5" y1="5" x2="15" y2="15" />
@@ -1201,6 +1206,7 @@ function App() {
                 className={`foundation-tone-btn ${lipColor === tone.hex ? 'selected' : ''}`}
                 onClick={() => {
                   setLipColor(tone.hex);
+                  setShowLip(true);
                   setShowLipstickTones(false);
                 }}
               >
@@ -1222,6 +1228,7 @@ function App() {
           className={`foundation-tone-btn ${lipLinerColor === tone.hex ? 'selected' : ''}`}
           onClick={() => {
             setLipLinerColor(tone.hex);
+            setShowLipLiner(true);
             setShowLiplinerTones(false);
           }}
         >
@@ -1239,7 +1246,7 @@ function App() {
         <div className="foundation-tones-header">
           <h3>Олівець для губ</h3>
           <div className="foundation-tones-actions">
-            <button className="foundation-tones-disable" title="Вимкнути шар" onClick={() => { setShowLipLiner(false); setShowLiplinerTones(false); }}>
+            <button className={`foundation-tones-disable ${showLipLiner ? '' : 'active'}`} title="Вимкнути шар" onClick={() => { setLipLinerColor(''); setShowLipLiner(false); setShowLiplinerTones(false); }}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <circle cx="10" cy="10" r="8" />
                 <line x1="5" y1="5" x2="15" y2="15" />
@@ -1277,6 +1284,7 @@ function App() {
                 className={`foundation-tone-btn ${lipLinerColor === tone.hex ? 'selected' : ''}`}
                 onClick={() => {
                   setLipLinerColor(tone.hex);
+                  setShowLipLiner(true);
                   setShowLiplinerTones(false);
                 }}
               >
@@ -1291,11 +1299,11 @@ function App() {
   );
 
   const pickerMeta = {
-    foundation: { title: 'Тональний крем', currentColor: foundationColor, setColor: setFoundationColor, swatches: ['#f3cfb3', '#e4b38d', '#d3a17e', '#c68e65', '#8d5524', '#5c381a', '#3e2211', '#f5e0cc'], show: showFoundation, toggle: () => setShowFoundation(v => !v) },
-    blush: { title: "Рум'яна", currentColor: blushColor, setColor: setBlushColor, swatches: ['#FF9999', '#FFCCCC', '#F08080', '#CD5C5C', '#E9967A', '#FFA07A', '#FFB6C1', '#FF69B4'], show: showBlush, toggle: () => setShowBlush(v => !v) },
-    lip: { title: 'Помада', currentColor: lipColor, setColor: setLipColor, swatches: ['#CC3333', '#FF6699', '#EE82EE', '#A0522D', '#8B0000', '#FFD700', '#DC143C', '#C71585'], show: showLip, toggle: () => setShowLip(v => !v) },
-    gloss: { title: 'Блиск для губ', currentColor: lipGlossColor, setColor: setLipGlossColor, swatches: ['#FFD6E8', '#FFD700', '#FFE4B5', '#F5DEB3', '#E0F0FF', '#FFC0CB', '#DDA0DD', '#FFF0F5'], show: showGloss, toggle: () => setShowGloss(v => !v) },
-    lipLiner: { title: 'Контур для губ', currentColor: lipLinerColor, setColor: setLipLinerColor, swatches: ['#8B0000', '#A0522D', '#CD5C5C', '#800020', '#483C32', '#660000', '#4A0404', '#2C1608'], show: showLipLiner, toggle: () => setShowLipLiner(v => !v) },
+    foundation: { title: 'Тональний крем', currentColor: foundationColor, setColor: setFoundationColor, swatches: ['#f3cfb3', '#e4b38d', '#d3a17e', '#c68e65', '#8d5524', '#5c381a', '#3e2211', '#f5e0cc'], show: showFoundation, toggle: () => setShowFoundation(v => !v), setShow: setShowFoundation },
+    blush: { title: "Рум'яна", currentColor: blushColor, setColor: setBlushColor, swatches: ['#FF9999', '#FFCCCC', '#F08080', '#CD5C5C', '#E9967A', '#FFA07A', '#FFB6C1', '#FF69B4'], show: showBlush, toggle: () => setShowBlush(v => !v), setShow: setShowBlush },
+    lip: { title: 'Помада', currentColor: lipColor, setColor: setLipColor, swatches: ['#CC3333', '#FF6699', '#EE82EE', '#A0522D', '#8B0000', '#FFD700', '#DC143C', '#C71585'], show: showLip, toggle: () => setShowLip(v => !v), setShow: setShowLip },
+    gloss: { title: 'Блиск для губ', currentColor: lipGlossColor, setColor: setLipGlossColor, swatches: ['#FFD6E8', '#FFD700', '#FFE4B5', '#F5DEB3', '#E0F0FF', '#FFC0CB', '#DDA0DD', '#FFF0F5'], show: showGloss, toggle: () => setShowGloss(v => !v), setShow: setShowGloss },
+    lipLiner: { title: 'Контур для губ', currentColor: lipLinerColor, setColor: setLipLinerColor, swatches: ['#8B0000', '#A0522D', '#CD5C5C', '#800020', '#483C32', '#660000', '#4A0404', '#2C1608'], show: showLipLiner, toggle: () => setShowLipLiner(v => !v), setShow: setShowLipLiner },
   };
 
   const activePicker = activeColorPicker ? pickerMeta[activeColorPicker] : null;
@@ -1306,7 +1314,7 @@ function App() {
         <div className="color-picker-header">
           <h3>{activePicker.title}</h3>
           <div className="foundation-tones-actions">
-            <button className="foundation-tones-disable" title="Вимкнути шар" onClick={() => { activePicker.toggle(); setActiveColorPicker(null); }}>
+            <button className={`foundation-tones-disable ${activePicker.show ? '' : 'active'}`} title="Вимкнути шар" onClick={() => { activePicker.setColor(''); activePicker.setShow(false); setActiveColorPicker(null); }}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <circle cx="10" cy="10" r="8" />
                 <line x1="5" y1="5" x2="15" y2="15" />
@@ -1317,12 +1325,12 @@ function App() {
         </div>
         <div className="color-grid">
           {activePicker.swatches.map(color => (
-            <button key={color} className={`color-swatch ${activePicker.currentColor === color ? 'selected' : ''}`} style={{ backgroundColor: color }} onClick={() => { activePicker.setColor(color); setActiveColorPicker(null); }} />
+            <button key={color} className={`color-swatch ${activePicker.currentColor === color ? 'selected' : ''}`} style={{ backgroundColor: color }} onClick={() => { activePicker.setColor(color); activePicker.setShow(true); setActiveColorPicker(null); }} />
           ))}
         </div>
         <div className="custom-color-row">
           <label>Свій колір</label>
-          <input type="color" value={activePicker.currentColor} onChange={(e) => { activePicker.setColor(e.target.value); setActiveColorPicker(null); }} />
+          <input type="color" value={activePicker.currentColor} onChange={(e) => { activePicker.setColor(e.target.value); activePicker.setShow(true); setActiveColorPicker(null); }} />
         </div>
         <div className="bottom-actions">
           <button className="btn-compare" onClick={() => { activePicker.toggle(); setActiveColorPicker(null); }}>{activePicker.show ? 'Прибрати шар' : 'Показати шар'}</button>
