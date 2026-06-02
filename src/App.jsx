@@ -285,8 +285,8 @@ function App() {
   const defaultLiplinerColor = getDefaultLiplinerColor();
   const latestMakeupState = useRef({
     foundationColor: defaultFoundationColor,
-    opacity: 0.38,
-    matte: 0.75,
+    opacity: 0.39,
+    matte: 0.46,
     lipColor: defaultLipstickColor,
     blushColor: defaultBlushColor,
     lipGlossColor: '#310606',
@@ -295,10 +295,10 @@ function App() {
     showFoundation: true,
     showBlush: true,
     showLip: true,
-    showGloss: true,
+    showGloss: false,
     showLipLiner: true,
     skinSmooth: true,
-    skinSmoothStrength: 0.31,
+    skinSmoothStrength: 0.32,
     eyeBrightness: 0.05,
   });
 
@@ -957,7 +957,15 @@ function App() {
       <div className="foundation-tones-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="foundation-tones-header">
           <h3>Тональний крем</h3>
-          <button className="foundation-tones-close" onClick={() => setShowFoundationTones(false)}>✕</button>
+          <div className="foundation-tones-actions">
+            <button className="foundation-tones-disable" title="Вимкнути шар" onClick={() => { setShowFoundation(false); setShowFoundationTones(false); }}>
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="10" cy="10" r="8" />
+                <line x1="5" y1="5" x2="15" y2="15" />
+              </svg>
+            </button>
+            <button className="foundation-tones-close" onClick={() => setShowFoundationTones(false)}>✕</button>
+          </div>
         </div>
         {toneZones ? (
           <div className="foundation-tones-zones">
@@ -1025,7 +1033,15 @@ function App() {
       <div className="foundation-tones-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="foundation-tones-header">
           <h3>Рум'яна</h3>
-          <button className="foundation-tones-close" onClick={() => setShowBlushTones(false)}>✕</button>
+          <div className="foundation-tones-actions">
+            <button className="foundation-tones-disable" title="Вимкнути шар" onClick={() => { setShowBlush(false); setShowBlushTones(false); }}>
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="10" cy="10" r="8" />
+                <line x1="5" y1="5" x2="15" y2="15" />
+              </svg>
+            </button>
+            <button className="foundation-tones-close" onClick={() => setShowBlushTones(false)}>✕</button>
+          </div>
         </div>
         {blushZones ? (
           <div className="foundation-tones-zones">
@@ -1093,7 +1109,15 @@ function App() {
       <div className="foundation-tones-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="foundation-tones-header">
           <h3>Помада</h3>
-          <button className="foundation-tones-close" onClick={() => setShowLipstickTones(false)}>✕</button>
+          <div className="foundation-tones-actions">
+            <button className="foundation-tones-disable" title="Вимкнути шар" onClick={() => { setShowLip(false); setShowLipstickTones(false); }}>
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="10" cy="10" r="8" />
+                <line x1="5" y1="5" x2="15" y2="15" />
+              </svg>
+            </button>
+            <button className="foundation-tones-close" onClick={() => setShowLipstickTones(false)}>✕</button>
+          </div>
         </div>
         {lipstickZones ? (
           <div className="foundation-tones-zones">
@@ -1161,7 +1185,15 @@ function App() {
       <div className="foundation-tones-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="foundation-tones-header">
           <h3>Олівець для губ</h3>
-          <button className="foundation-tones-close" onClick={() => setShowLiplinerTones(false)}>✕</button>
+          <div className="foundation-tones-actions">
+            <button className="foundation-tones-disable" title="Вимкнути шар" onClick={() => { setShowLipLiner(false); setShowLiplinerTones(false); }}>
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="10" cy="10" r="8" />
+                <line x1="5" y1="5" x2="15" y2="15" />
+              </svg>
+            </button>
+            <button className="foundation-tones-close" onClick={() => setShowLiplinerTones(false)}>✕</button>
+          </div>
         </div>
         {liplinerZones ? (
           <div className="foundation-tones-zones">
@@ -1220,7 +1252,15 @@ function App() {
       <div className="color-picker-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="color-picker-header">
           <h3>{activePicker.title}</h3>
-          <button className="color-picker-close" onClick={() => setActiveColorPicker(null)}>✕</button>
+          <div className="foundation-tones-actions">
+            <button className="foundation-tones-disable" title="Вимкнути шар" onClick={() => { activePicker.toggle(); setActiveColorPicker(null); }}>
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="10" cy="10" r="8" />
+                <line x1="5" y1="5" x2="15" y2="15" />
+              </svg>
+            </button>
+            <button className="color-picker-close" onClick={() => setActiveColorPicker(null)}>✕</button>
+          </div>
         </div>
         <div className="color-grid">
           {activePicker.swatches.map(color => (

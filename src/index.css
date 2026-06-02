@@ -499,6 +499,37 @@ video, canvas {
   margin: 0;
 }
 
+.foundation-tones-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.foundation-tones-disable {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #374151;
+  border: none;
+  color: #d1d5db;
+  font-size: 18px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.15s ease;
+}
+
+.foundation-tones-disable:active {
+  background: #4b5563;
+}
+
+.foundation-tones-disable:hover {
+  background: #dc2626;
+  color: #ffffff;
+}
+
 .foundation-tones-close {
   width: 32px;
   height: 32px;
