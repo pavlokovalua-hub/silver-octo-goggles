@@ -12,7 +12,15 @@ const FOREHEAD_EXTEND_EYEBROW_OFFSET = 0.01;
 // ─────── Temporal landmark smoothing (low-pass filter for jitter reduction) ───────
 // Експоненційне ковзне середнє (EWMA) для усунення тремтіння лендмарків між кадрами.
 // Lower alpha = smoother but more lag; higher alpha = more responsive but more jitter
-const LANDMARK_SMOOTHING_ALPHA = 0.7;
+const LANDMARK_SMOOTHING_ALPHA = 0.6;
+
+// ─────── Константи чутливості детектора якості відео ───────
+// LUMINANCE_THRESHOLD: якщо яскравість пікселя нижче — вважається темним
+// DARK_RATIO_THRESHOLD: якщо відсоток темних пікселів на обличчі вище — недостатньо світла
+// NOISE_GRADIENT_THRESHOLD: якщо середній градієнт між сусідніми пікселями вище — занадто зернисто (високе ISO)
+const LUMINANCE_THRESHOLD = 110;
+const DARK_RATIO_THRESHOLD = 0.25;
+const NOISE_GRADIENT_THRESHOLD = 6;
 
 // ─────── Модульні константи (лендмарки) ───────
 const FACE_OVAL = [
@@ -36,6 +44,13 @@ const LEFT_IRIS = [468, 469, 470, 471, 472];
 const RIGHT_IRIS = [473, 474, 475, 476, 477];
 // Внутрішній контур рота (простір між губами — зуби, порожнина рота)
 const MOUTH_INTERIOR = [78, 191, 80, 81, 82, 13, 312, 311, 310, 415, 308, 324, 318, 402, 317, 14, 87, 178, 88, 95, 78];
+
+// Всі унікальні індекси лендмарків, що стосуються губ (губи + контур + внутрішній рот)
+const LIP_INDICES = new Set([
+  0, 13, 14, 17, 37, 39, 40, 61, 78, 80, 81, 82, 84, 87, 88, 91, 95,
+  146, 178, 181, 185, 191, 267, 269, 270, 291, 308, 310, 311, 312, 314,
+  317, 318, 321, 324, 375, 402, 405, 409, 415
+]);
 const ALL_BROWS = [...LEFT_EYEBROW, ...RIGHT_EYEBROW];
 // Вирізається: очі (щоб не фарбувались), внутрішня частина рота (зуби/порожнина),
 // верхня та нижня губа — тональник не має зафарбовувати губи.
@@ -328,16 +343,27 @@ function App() {
   const [eyeBrightness, setEyeBrightness] = useState(latestMakeupState.current.eyeBrightness);
   const [cameraSupported, setCameraSupported] = useState(true);
   const [lowLightWarning, setLowLightWarning] = useState(false);
+  const lowLightWarningRef = useRef(false); // синхронізується з lowLightWarning для використання в onResults (closure)
   const frameCounterRef = useRef(0);
   const latestLandmarksRef = useRef(null);
   const layerCanvasRef = useRef(null);
   const matteCanvasRef = useRef(null);
   const smoothedLandmarksRef = useRef(null);
   const isFirstFrameRef = useRef(true);
+  // Кешовані канваси для аналізу якості відео (щоб не створювати щокадру)
+  const _detectCanvasRef = useRef(null);
+  const _detectMaskRef = useRef(null);
+  // Кешовані канваси для foundation blur (не створюємо нові щокадру)
+  const _fbBlurRef = useRef(null);
+  const _fbMatteBlurRef = useRef(null);
+  // Кешовані дані computeFaceBounds (одна обчислення на кадр)
+  const _cachedBoundsRef = useRef(null);
+
 
   // ───── Temporal smoothing for landmarks (low-pass filter / EWMA) ─────
-  // Застосовує експоненційне ковзне середнє до кожного лендмарку,
+  // Застосовує експоненційне ковзне середнє ТІЛЬКИ до лендмарків губ і контуру губ,
   // щоб усунути тремтіння від кадру до кадру: smoothed = prev + alpha * (raw - prev)
+  // Інші лендмарки (обличчя, очі, брови, рум'яна тощо) залишаються raw (без згладжування).
   function smoothLandmarks(rawLandmarks) {
     if (isFirstFrameRef.current || !smoothedLandmarksRef.current) {
       // Перший кадр — копіюємо як є
@@ -350,11 +376,24 @@ function App() {
     const alpha = LANDMARK_SMOOTHING_ALPHA;
     const oneMinusAlpha = 1 - alpha;
 
+    // Згладжуємо тільки лендмарки губ і контуру губ (LIP_INDICES)
+    for (const i of LIP_INDICES) {
+      if (i < rawLandmarks.length) {
+        prev[i].x = prev[i].x * oneMinusAlpha + rawLandmarks[i].x * alpha;
+        prev[i].y = prev[i].y * oneMinusAlpha + rawLandmarks[i].y * alpha;
+        if (rawLandmarks[i].z !== undefined) {
+          prev[i].z = prev[i].z * oneMinusAlpha + rawLandmarks[i].z * alpha;
+        }
+      }
+    }
+    // Для всіх інших лендмарків — копіюємо raw значення (без згладжування)
     for (let i = 0; i < rawLandmarks.length; i++) {
-      prev[i].x = prev[i].x * oneMinusAlpha + rawLandmarks[i].x * alpha;
-      prev[i].y = prev[i].y * oneMinusAlpha + rawLandmarks[i].y * alpha;
-      if (rawLandmarks[i].z !== undefined) {
-        prev[i].z = prev[i].z * oneMinusAlpha + rawLandmarks[i].z * alpha;
+      if (!LIP_INDICES.has(i)) {
+        prev[i].x = rawLandmarks[i].x;
+        prev[i].y = rawLandmarks[i].y;
+        if (rawLandmarks[i].z !== undefined) {
+          prev[i].z = rawLandmarks[i].z;
+        }
       }
     }
     return prev;
@@ -424,20 +463,37 @@ function App() {
     skinSmooth, skinSmoothStrength, eyeBrightness,
   ]);
 
-  function detectExcessiveShadows(videoEl, landmarks, w, h) {
+  /**
+   * Єдина функція аналізу якості відео — об'єднує перевірку тіней та шуму
+   * в один прохід по пікселях, з використанням кешованих канвасів.
+   * Повертає true якщо затемно або занадто зернисто (високе ISO).
+   */
+  function detectVideoQuality(videoEl, landmarks, w, h) {
     const sw = Math.round(w / 4);
     const sh = Math.round(h / 4);
-    const frameCanvas = document.createElement('canvas');
-    frameCanvas.width = sw; frameCanvas.height = sh;
-    const frameCtx = frameCanvas.getContext('2d');
+
+    // ── Frame canvas (кешований) ──
+    if (!_detectCanvasRef.current || _detectCanvasRef.current.width !== sw || _detectCanvasRef.current.height !== sh) {
+      const c = document.createElement('canvas');
+      c.width = sw; c.height = sh;
+      _detectCanvasRef.current = c;
+    }
+    const frameCtx = _detectCanvasRef.current.getContext('2d');
     frameCtx.drawImage(videoEl, 0, 0, sw, sh);
-    const maskCanvas = document.createElement('canvas');
-    maskCanvas.width = sw; maskCanvas.height = sh;
-    const maskCtx = maskCanvas.getContext('2d');
+
+    // ── Mask canvas (кешований) ──
+    if (!_detectMaskRef.current || _detectMaskRef.current.width !== sw || _detectMaskRef.current.height !== sh) {
+      const c = document.createElement('canvas');
+      c.width = sw; c.height = sh;
+      _detectMaskRef.current = c;
+    }
+    const maskCtx = _detectMaskRef.current.getContext('2d');
     maskCtx.fillStyle = '#000000';
     maskCtx.fillRect(0, 0, sw, sh);
     maskCtx.fillStyle = '#ffffff';
     fillPathDirect(maskCtx, landmarks, FACE_OVAL, sw, sh);
+
+    // Додаємо лоб до маски
     const { eyebrowTopY, minX, maxX } = computeFaceBounds(landmarks);
     const topCenter = landmarks[10];
     if (topCenter && minX < 1 && maxX > 0 && eyebrowTopY < 1) {
@@ -456,91 +512,66 @@ function App() {
       maskCtx.closePath();
       maskCtx.fill();
     }
+
     const frameData = frameCtx.getImageData(0, 0, sw, sh).data;
     const maskData = maskCtx.getImageData(0, 0, sw, sh).data;
     const n = sw * sh;
-    let totalPixels = 0, darkPixels = 0;
-    const LUMINANCE_THRESHOLD = 100, DARK_RATIO_THRESHOLD = 0.3;
+
+    // ════════════════════════════════════════════
+    // ЄДИНИЙ ПРОХІД — одночасно шум + тіні
+    // ════════════════════════════════════════════
+    let darkPixels = 0, totalPixels = 0;
+    let totalGradient = 0, sampleCount = 0;
+    const blockSize = 4;
+    const SW = sw; // локальна копія для швидкості
+
     for (let i = 0; i < n; i++) {
       const idx = i * 4;
-      if (maskData[idx + 3] > 128) {
-        totalPixels++;
-        const luminance = 0.299 * frameData[idx] + 0.587 * frameData[idx + 1] + 0.114 * frameData[idx + 2];
-        if (luminance < LUMINANCE_THRESHOLD) darkPixels++;
-      }
-    }
-    if (totalPixels === 0) return false;
-    return (darkPixels / totalPixels) > DARK_RATIO_THRESHOLD;
-  }
+      if (maskData[idx + 3] <= 128) continue;
+      totalPixels++;
 
-  /**
-   * Аналізує зернистість (шум) відео в області обличчя.
-   * Коли камера працює в умовах недостатнього освітлення, вона піднімає ISO,
-   * що призводить до характерної зернистості зображення.
-   * 
-   * Метод: обчислює середню локальну варіацію пікселів у невеликих блоках
-   * в області обличчя. Високе значення свідчить про наявність шуму/зерна.
-   */
-  function detectExcessiveNoise(videoEl, landmarks, w, h) {
-    const sw = Math.round(w / 4);
-    const sh = Math.round(h / 4);
-    const frameCanvas = document.createElement('canvas');
-    frameCanvas.width = sw; frameCanvas.height = sh;
-    const frameCtx = frameCanvas.getContext('2d');
-    frameCtx.drawImage(videoEl, 0, 0, sw, sh);
-    const maskCanvas = document.createElement('canvas');
-    maskCanvas.width = sw; maskCanvas.height = sh;
-    const maskCtx = maskCanvas.getContext('2d');
-    maskCtx.fillStyle = '#000000';
-    maskCtx.fillRect(0, 0, sw, sh);
-    maskCtx.fillStyle = '#ffffff';
-    fillPathDirect(maskCtx, landmarks, FACE_OVAL, sw, sh);
+      // Luminance для тіней
+      const r = frameData[idx];
+      const g = frameData[idx + 1];
+      const b = frameData[idx + 2];
+      const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+      if (luminance < LUMINANCE_THRESHOLD) darkPixels++;
 
-    const pixels = frameCtx.getImageData(0, 0, sw, sh).data;
-    const mask = maskCtx.getImageData(0, 0, sw, sh).data;
-    const blockSize = 4;
-
-    let totalGradient = 0;
-    let sampleCount = 0;
-
-    // Обчислюємо середній градієнт (різницю між сусідніми пікселями)
-    // в області обличчя. Висока середня різниця = зернистість/шум.
-    for (let y = 1; y < sh - 1; y++) {
-      for (let x = 1; x < sw - 1; x += blockSize) {
-        const idx = (y * sw + x) * 4;
-        if (mask[idx + 3] <= 128) continue;
-
-        // Беремо різницю між пікселем та його сусідами (як простий high-pass filter)
-        let localDiff = 0;
-        let localCount = 0;
-        for (let dy = -1; dy <= 1; dy++) {
-          for (let dx = -1; dx <= 1; dx++) {
-            if (dy === 0 && dx === 0) continue;
-            const ni = ((y + dy) * sw + (x + dx)) * 4;
-            if (mask[ni + 3] <= 128) continue;
-            // Різниця яскравості (luminance)
-            const lumCenter = 0.299 * pixels[idx] + 0.587 * pixels[idx + 1] + 0.114 * pixels[idx + 2];
-            const lumNeighbor = 0.299 * pixels[ni] + 0.587 * pixels[ni + 1] + 0.114 * pixels[ni + 2];
-            localDiff += Math.abs(lumCenter - lumNeighbor);
-            localCount++;
+      // Gradient для шуму (кожен blockSize-ий піксель)
+      if (sampleCount === 0 || (i % (blockSize * SW)) < blockSize) {
+        // Вважаємо один піксель з кожного блоку для градієнта
+        const y = Math.floor(i / SW);
+        const x = i % SW;
+        if (y > 0 && y < sh - 1 && x > 0 && x < sw - 1) {
+          let localDiff = 0;
+          let localCount = 0;
+          for (let dy = -1; dy <= 1; dy++) {
+            for (let dx = -1; dx <= 1; dx++) {
+              if (dy === 0 && dx === 0) continue;
+              const ni = ((y + dy) * SW + (x + dx)) * 4;
+              if (maskData[ni + 3] <= 128) continue;
+              const nr = frameData[ni];
+              const ng = frameData[ni + 1];
+              const nb = frameData[ni + 2];
+              const lumN = 0.299 * nr + 0.587 * ng + 0.114 * nb;
+              localDiff += Math.abs(luminance - lumN);
+              localCount++;
+            }
+          }
+          if (localCount > 0) {
+            totalGradient += localDiff / localCount;
+            sampleCount++;
           }
         }
-        if (localCount > 0) {
-          totalGradient += localDiff / localCount;
-          sampleCount++;
-        }
       }
     }
 
-    if (sampleCount < 20) return false;
-    const avgGradient = totalGradient / sampleCount;
+    // Тіні
+    const hasDarkness = totalPixels > 0 && (darkPixels / totalPixels) > DARK_RATIO_THRESHOLD;
+    // Шум
+    const hasNoise = sampleCount >= 10 && (totalGradient / sampleCount) > NOISE_GRADIENT_THRESHOLD;
 
-    // Поріг для середнього градієнту:
-    // - < 5: гладке зображення, шуму майже немає
-    // - 5-8: помірний шум, допустимо
-    // - > 8: сильний шум/зернистість через високе ISO
-    const NOISE_GRADIENT_THRESHOLD = 8;
-    return avgGradient > NOISE_GRADIENT_THRESHOLD;
+    return hasDarkness || hasNoise;
   }
 
   function onResults(results) {
@@ -551,23 +582,31 @@ function App() {
     canvasCtx.save();
     canvasCtx.clearRect(0, 0, width, height);
     canvasCtx.drawImage(videoRef.current, 0, 0, width, height);
+
     if (results.multiFaceLandmarks) {
-      for (const rawLandmarks of results.multiFaceLandmarks) {
-        // ── Застосовуємо темпоральне згладжування лендмарків ──
-        detectAndResetOnJump(rawLandmarks);
-        const smoothed = smoothLandmarks(rawLandmarks);
-        latestLandmarksRef.current = smoothed;
+      const rawLandmarks = results.multiFaceLandmarks[0];
+      // ── Завжди оновлюємо лендмарки (для detectVideoQuality) ──
+      detectAndResetOnJump(rawLandmarks);
+      const smoothed = smoothLandmarks(rawLandmarks);
+      latestLandmarksRef.current = smoothed;
+
+      // ── Малюємо макіяж тільки якщо достатньо світла ──
+      if (!lowLightWarningRef.current) {
         drawMakeup(canvasCtx, smoothed, state, width, height);
       }
     }
+
+    // ── Перевіряємо якість кожні 15 кадрів ──
     frameCounterRef.current++;
     if (frameCounterRef.current % 15 === 0 && latestLandmarksRef.current && videoRef.current) {
-      const isTooDark = detectExcessiveShadows(videoRef.current, latestLandmarksRef.current, width, height);
-      const isTooNoisy = detectExcessiveNoise(videoRef.current, latestLandmarksRef.current, width, height);
-      setLowLightWarning(isTooDark || isTooNoisy);
+      const isBadQuality = detectVideoQuality(videoRef.current, latestLandmarksRef.current, width, height);
+      lowLightWarningRef.current = isBadQuality;
+      setLowLightWarning(isBadQuality);
     }
+
+    // ── Skin smoothing тільки при хорошому освітленні ──
     const lm = latestLandmarksRef.current;
-    if (state.skinSmooth && lm && state.skinSmoothStrength > 0) {
+    if (state.skinSmooth && lm && state.skinSmoothStrength > 0 && !lowLightWarningRef.current) {
       applySkinSmoothing(canvasCtx, lm, width, height, state.skinSmoothStrength);
     }
     canvasCtx.restore();
@@ -677,15 +716,19 @@ function App() {
       // 2. Вирізаємо очі та рот — до блюру
       punchOutEyesMouth(layerCtx, landmarks, fw, fh);
 
-      // 3. Blur via temp canvas
-      const blurCanvas = document.createElement('canvas');
-      blurCanvas.width = fw; blurCanvas.height = fh;
-      const blurCtx = blurCanvas.getContext('2d');
+      // 3. Blur via cached temp canvas (clear first — blur filter creates semi-transparent edges)
+      if (!_fbBlurRef.current || _fbBlurRef.current.width !== fw || _fbBlurRef.current.height !== fh) {
+        const c = document.createElement('canvas');
+        c.width = fw; c.height = fh;
+        _fbBlurRef.current = c;
+      }
+      const blurCtx = _fbBlurRef.current.getContext('2d');
+      blurCtx.clearRect(0, 0, fw, fh);
       blurCtx.filter = 'blur(6px)';
       blurCtx.drawImage(layerCanvasRef.current, 0, 0);
       blurCtx.filter = 'none';
       layerCtx.clearRect(0, 0, fw, fh);
-      layerCtx.drawImage(blurCanvas, 0, 0);
+      layerCtx.drawImage(_fbBlurRef.current, 0, 0);
 
       // 4. Вирізаємо повторно — після блюру
       punchOutEyesMouth(layerCtx, landmarks, fw, fh);
@@ -705,14 +748,18 @@ function App() {
         matteCtx.fill();
         punchOutEyesMouth(matteCtx, landmarks, fw, fh);
 
-        const mBlurCanvas = document.createElement('canvas');
-        mBlurCanvas.width = fw; mBlurCanvas.height = fh;
-        const mBlurCtx = mBlurCanvas.getContext('2d');
+        if (!_fbMatteBlurRef.current || _fbMatteBlurRef.current.width !== fw || _fbMatteBlurRef.current.height !== fh) {
+          const c = document.createElement('canvas');
+          c.width = fw; c.height = fh;
+          _fbMatteBlurRef.current = c;
+        }
+        const mBlurCtx = _fbMatteBlurRef.current.getContext('2d');
+        mBlurCtx.clearRect(0, 0, fw, fh);
         mBlurCtx.filter = 'blur(4px)';
         mBlurCtx.drawImage(matteCanvasRef.current, 0, 0);
         mBlurCtx.filter = 'none';
         matteCtx.clearRect(0, 0, fw, fh);
-        matteCtx.drawImage(mBlurCanvas, 0, 0);
+        matteCtx.drawImage(_fbMatteBlurRef.current, 0, 0);
         punchOutEyesMouth(matteCtx, landmarks, fw, fh);
 
         ctx.save();
@@ -1417,7 +1464,7 @@ function App() {
       <div className="mobile-layout">
         <div className="video-area">{videoCanvas}</div>
         {lowLightWarning && (
-          <div className="shadow-warning shadow-warning-overlay"><span>⚠️</span> Недостатньо світла — додайте освітлення для точного підбору тону</div>
+          <div className="shadow-warning shadow-warning-overlay"><span>⚠</span> Poor lighting — add more light for accurate shade matching</div>
         )}
         <div className="controls-panel">
           <div className="color-buttons">
@@ -1452,7 +1499,7 @@ function App() {
     <div className="desktop-layout min-h-screen bg-gray-900 text-white p-4">
       <div className="main-content flex flex-col lg:flex-row items-center gap-8 bg-gray-800 p-6 rounded-lg shadow-xl max-w-6xl mx-auto">
         <div className="side-panel flex flex-col gap-6 w-full lg:w-80 bg-gray-700 p-5 rounded-lg order-1 lg:order-2">
-          {lowLightWarning && <div className="shadow-warning"><span>⚠️</span> Недостатньо світла — додайте освітлення для точного підбору тону</div>}
+          {lowLightWarning && <div className="shadow-warning"><span>⚠️</span> Poor lighting — add more light for accurate shade matching</div>}
           {controlsContent}
         </div>
         <div className="flex justify-center lg:justify-start w-full lg:w-auto order-2 lg:order-1">
