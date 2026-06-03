@@ -12,7 +12,7 @@ const FOREHEAD_EXTEND_EYEBROW_OFFSET = 0.01;
 // ─────── Temporal landmark smoothing (low-pass filter for jitter reduction) ───────
 // Експоненційне ковзне середнє (EWMA) для усунення тремтіння лендмарків між кадрами.
 // Lower alpha = smoother but more lag; higher alpha = more responsive but more jitter
-const LANDMARK_SMOOTHING_ALPHA = 0.5;
+const LANDMARK_SMOOTHING_ALPHA = 0.55;
 
 // ─────── Модульні константи (лендмарки) ───────
 const FACE_OVAL = [
@@ -1010,7 +1010,7 @@ function App() {
     <div className="foundation-tones-overlay" onClick={() => setShowFoundationTones(false)}>
       <div className="foundation-tones-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="foundation-tones-header">
-          <h3>Тональний крем</h3>
+          <h3>Foundation Tones</h3>
           <div className="foundation-tones-actions">
             <button className={`foundation-tones-disable ${showFoundation ? '' : 'active'}`} title="Вимкнути шар" onClick={() => { setFoundationColor(''); setShowFoundation(false); setShowFoundationTones(false); }}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -1088,7 +1088,7 @@ function App() {
     <div className="foundation-tones-overlay" onClick={() => setShowBlushTones(false)}>
       <div className="foundation-tones-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="foundation-tones-header">
-          <h3>Рум'яна</h3>
+          <h3>Blush Tones</h3>
           <div className="foundation-tones-actions">
             <button className={`foundation-tones-disable ${showBlush ? '' : 'active'}`} title="Вимкнути шар" onClick={() => { setBlushColor(''); setShowBlush(false); setShowBlushTones(false); }}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -1166,7 +1166,7 @@ function App() {
     <div className="foundation-tones-overlay" onClick={() => setShowLipstickTones(false)}>
       <div className="foundation-tones-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="foundation-tones-header">
-          <h3>Помада</h3>
+          <h3>Lipstick Tones</h3>
           <div className="foundation-tones-actions">
             <button className={`foundation-tones-disable ${showLip ? '' : 'active'}`} title="Вимкнути шар" onClick={() => { setLipColor(''); setShowLip(false); setShowLipstickTones(false); }}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -1244,7 +1244,7 @@ function App() {
     <div className="foundation-tones-overlay" onClick={() => setShowLiplinerTones(false)}>
       <div className="foundation-tones-sheet" onClick={(e) => e.stopPropagation()}>
         <div className="foundation-tones-header">
-          <h3>Олівець для губ</h3>
+          <h3>Lipliner Tones</h3>
           <div className="foundation-tones-actions">
             <button className={`foundation-tones-disable ${showLipLiner ? '' : 'active'}`} title="Вимкнути шар" onClick={() => { setLipLinerColor(''); setShowLipLiner(false); setShowLiplinerTones(false); }}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">

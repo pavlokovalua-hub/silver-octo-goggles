@@ -1,6 +1,7 @@
 [
     {
         "sku": "212-15503",
+        "default": true,
         "name": "Big Spender",
         "background": "rgb(245, 178, 170)"
     },
@@ -36,7 +37,7 @@
     },
     {
         "sku": "212-15502",
-        "name": "Vogue - Dusty rose",
+        "name": "Warmth",
         "background": "rgb(212, 148, 155)"
     }
 ]
