@@ -1544,18 +1544,18 @@ function App() {
     <div className="desktop-settings-overlay" onClick={() => setShowDesktopSettings(false)}>
       <div className="desktop-settings-panel" onClick={(e) => e.stopPropagation()}>
         <div className="desktop-settings-header">
-          <h3>⚙️ Налаштування</h3>
+          <h3>⚙️ Settings</h3>
           <button className="desktop-settings-close" onClick={() => setShowDesktopSettings(false)}>✕</button>
         </div>
 
         <div className="desktop-settings-group">
           <label>
             <input type="checkbox" checked={showGloss} onChange={(e) => setShowGloss(e.target.checked)} />
-            Блиск для губ (Gloss)
+            Lip Gloss
           </label>
           {showGloss && (
             <div className="slider-row">
-              <span style={{fontSize:'12px', color:'rgba(255,255,255,0.5)', flexShrink:0}}>Інтенсивність</span>
+              <span style={{fontSize:'12px', color:'rgba(255,255,255,0.5)', flexShrink:0}}>Intensity</span>
               <input type="range" min="0" max="1" step="0.01" value={lipGlossOpacity} onChange={(e) => setLipGlossOpacity(parseFloat(e.target.value))} />
               <span className="slider-value">{Math.round(lipGlossOpacity * 100)}%</span>
             </div>
@@ -1569,7 +1569,7 @@ function App() {
           </label>
           {skinSmooth && (
             <div className="slider-row">
-              <span style={{fontSize:'12px', color:'rgba(255,255,255,0.5)', flexShrink:0}}>Сила</span>
+              <span style={{fontSize:'12px', color:'rgba(255,255,255,0.5)', flexShrink:0}}>Strength</span>
               <input type="range" min="0" max="1" step="0.01" value={skinSmoothStrength} onChange={(e) => setSkinSmoothStrength(parseFloat(e.target.value))} />
               <span className="slider-value">{Math.round(skinSmoothStrength * 100)}%</span>
             </div>
@@ -1577,7 +1577,7 @@ function App() {
         </div>
 
         <div className="desktop-settings-group">
-          <label>Покриття тональника: {Math.round(opacity * 100)}%</label>
+          <label>Foundation Coverage: {Math.round(opacity * 100)}%</label>
           <div className="slider-row">
             <input type="range" min="0" max="1" step="0.01" value={opacity} onChange={(e) => setOpacity(parseFloat(e.target.value))} />
             <span className="slider-value">{Math.round(opacity * 100)}%</span>
@@ -1585,7 +1585,7 @@ function App() {
         </div>
 
         <div className="desktop-settings-group">
-          <label>Matte фініш: {Math.round(matte * 100)}%</label>
+          <label>Matte Finish: {Math.round(matte * 100)}%</label>
           <div className="slider-row">
             <input type="range" min="0" max="1" step="0.01" value={matte} onChange={(e) => setMatte(parseFloat(e.target.value))} />
             <span className="slider-value">{Math.round(matte * 100)}%</span>
@@ -1593,7 +1593,7 @@ function App() {
         </div>
 
         <div className="desktop-settings-group">
-          <label>Яскравість очей: {Math.round(eyeBrightness * 100)}%</label>
+          <label>Eye Brightness: {Math.round(eyeBrightness * 100)}%</label>
           <div className="slider-row">
             <input type="range" min="0" max="1" step="0.01" value={eyeBrightness} onChange={(e) => setEyeBrightness(parseFloat(e.target.value))} />
             <span className="slider-value">{Math.round(eyeBrightness * 100)}%</span>

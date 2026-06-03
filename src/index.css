@@ -984,9 +984,7 @@ video, canvas {
 }
 
 .foundation-tones-sheet {
-  background: #1f2937;
-  border-top-left-radius: 20px;
-  border-top-right-radius: 20px;
+  background: #2d2d2db0;
   padding: 16px 16px 24px;
   height: 50vh;
   overflow-y: auto;
@@ -1000,13 +998,13 @@ video, canvas {
   justify-content: space-between;
   margin-bottom: 16px;
   padding-bottom: 12px;
-  border-bottom: 1px solid #374151;
+  border-bottom: 1px solid #757575a1;
 }
 
 .foundation-tones-header h3 {
   font-size: 18px;
   font-weight: 700;
-  color: #f9a8d4;
+  color: #ffffff;
   margin: 0;
 }
 
@@ -1051,7 +1049,7 @@ video, canvas {
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: #374151;
+  background: hsla(0, 0%, 70%, 0);
   border: none;
   color: #d1d5db;
   font-size: 18px;
@@ -1096,9 +1094,9 @@ video, canvas {
 }
 
 .foundation-tone-circle {
-  width: 27px;
-  height: 27px;
-  border-radius: 50%;
+  width: 50px;
+  height: 50px;
+  border-radius: 30%;
   border: 2px solid rgba(255,255,255,0.2);
   flex-shrink: 0;
   transition: border-color 0.15s ease;
