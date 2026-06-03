@@ -988,6 +988,7 @@ function App() {
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
   const [activeColorPicker, setActiveColorPicker] = useState(null);
+  const [showDesktopSettings, setShowDesktopSettings] = useState(false);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
@@ -1505,22 +1506,178 @@ function App() {
     );
   }
 
-  return (
-    <div className="desktop-layout min-h-screen bg-gray-900 text-white p-4">
-      <div className="main-content flex flex-col lg:flex-row items-center gap-8 bg-gray-800 p-6 rounded-lg shadow-xl max-w-6xl mx-auto">
-        <div className="side-panel flex flex-col gap-6 w-full lg:w-80 bg-gray-700 p-5 rounded-lg order-1 lg:order-2">
-          {lowLightWarning && <div className="shadow-warning"><span>⚠️</span> Poor lighting — add more light for accurate shade matching</div>}
-          {controlsContent}
-        </div>
-        <div className="flex justify-center lg:justify-start w-full lg:w-auto order-2 lg:order-1">
-          <div className="container relative w-full max-w-[90vw] sm:max-w-[640px] h-auto bg-gray-900 rounded-lg overflow-hidden">
-            {videoCanvas}
+  // ───── Desktop color picker popup ─────
+  const desktopColorPicker = activePicker && (
+    <div className="desktop-color-picker-overlay" onClick={() => setActiveColorPicker(null)}>
+      <div className="desktop-color-picker-panel" onClick={(e) => e.stopPropagation()}>
+        <div className="desktop-color-picker-header">
+          <h3>{activePicker.title}</h3>
+          <div className="picker-actions">
+            <button className={`foundation-tones-disable ${activePicker.show ? '' : 'active'}`} title="Вимкнути шар" onClick={() => { activePicker.setColor(''); activePicker.setShow(false); setActiveColorPicker(null); }}>
+              <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
+                <circle cx="10" cy="10" r="8" />
+                <line x1="5" y1="5" x2="15" y2="15" />
+              </svg>
+            </button>
+            <button className="color-picker-close" onClick={() => setActiveColorPicker(null)}>✕</button>
           </div>
         </div>
+        <div className="desktop-color-swatches">
+          {activePicker.swatches.map(color => (
+            <button key={color} className={`desktop-color-swatch ${activePicker.currentColor === color ? 'selected' : ''}`} style={{ backgroundColor: color }} onClick={() => { activePicker.setColor(color); activePicker.setShow(true); setActiveColorPicker(null); }} />
+          ))}
+        </div>
+        <div className="desktop-custom-color-row">
+          <label>Свій колір</label>
+          <input type="color" value={activePicker.currentColor} onChange={(e) => { activePicker.setColor(e.target.value); activePicker.setShow(true); setActiveColorPicker(null); }} />
+        </div>
+        <div className="desktop-picker-actions">
+          <button className={`toggle-layer-btn ${activePicker.show ? '' : 'hidden'}`} onClick={() => { activePicker.toggle(); setActiveColorPicker(null); }}>{activePicker.show ? 'Прибрати шар' : 'Показати шар'}</button>
+          <button className="picker-screenshot-btn" onClick={() => { takeScreenshot(); setActiveColorPicker(null); }}>Фото</button>
+        </div>
       </div>
-      <div className="info-panel mt-4 p-3 bg-gray-800 rounded-lg shadow-xl w-full max-w-[90vw] sm:max-w-6xl mx-auto">
-        <p className="text-sm text-gray-400 text-center">🎯 Advanced skin smoothing — applies a selective feathered airbrush effect to skin only, preserving eyes, brows, nose, lips, and facial features.</p>
+    </div>
+  );
+
+  // ───── Desktop settings panel (5th dock item) ─────
+  const desktopSettingsPanel = showDesktopSettings && (
+    <div className="desktop-settings-overlay" onClick={() => setShowDesktopSettings(false)}>
+      <div className="desktop-settings-panel" onClick={(e) => e.stopPropagation()}>
+        <div className="desktop-settings-header">
+          <h3>⚙️ Налаштування</h3>
+          <button className="desktop-settings-close" onClick={() => setShowDesktopSettings(false)}>✕</button>
+        </div>
+
+        <div className="desktop-settings-group">
+          <label>
+            <input type="checkbox" checked={showGloss} onChange={(e) => setShowGloss(e.target.checked)} />
+            Блиск для губ (Gloss)
+          </label>
+          {showGloss && (
+            <div className="slider-row">
+              <span style={{fontSize:'12px', color:'rgba(255,255,255,0.5)', flexShrink:0}}>Інтенсивність</span>
+              <input type="range" min="0" max="1" step="0.01" value={lipGlossOpacity} onChange={(e) => setLipGlossOpacity(parseFloat(e.target.value))} />
+              <span className="slider-value">{Math.round(lipGlossOpacity * 100)}%</span>
+            </div>
+          )}
+        </div>
+
+        <div className="desktop-settings-group">
+          <label>
+            <input type="checkbox" checked={skinSmooth} onChange={(e) => setSkinSmooth(e.target.checked)} />
+            Skin Smoothing
+          </label>
+          {skinSmooth && (
+            <div className="slider-row">
+              <span style={{fontSize:'12px', color:'rgba(255,255,255,0.5)', flexShrink:0}}>Сила</span>
+              <input type="range" min="0" max="1" step="0.01" value={skinSmoothStrength} onChange={(e) => setSkinSmoothStrength(parseFloat(e.target.value))} />
+              <span className="slider-value">{Math.round(skinSmoothStrength * 100)}%</span>
+            </div>
+          )}
+        </div>
+
+        <div className="desktop-settings-group">
+          <label>Покриття тональника: {Math.round(opacity * 100)}%</label>
+          <div className="slider-row">
+            <input type="range" min="0" max="1" step="0.01" value={opacity} onChange={(e) => setOpacity(parseFloat(e.target.value))} />
+            <span className="slider-value">{Math.round(opacity * 100)}%</span>
+          </div>
+        </div>
+
+        <div className="desktop-settings-group">
+          <label>Matte фініш: {Math.round(matte * 100)}%</label>
+          <div className="slider-row">
+            <input type="range" min="0" max="1" step="0.01" value={matte} onChange={(e) => setMatte(parseFloat(e.target.value))} />
+            <span className="slider-value">{Math.round(matte * 100)}%</span>
+          </div>
+        </div>
+
+        <div className="desktop-settings-group">
+          <label>Яскравість очей: {Math.round(eyeBrightness * 100)}%</label>
+          <div className="slider-row">
+            <input type="range" min="0" max="1" step="0.01" value={eyeBrightness} onChange={(e) => setEyeBrightness(parseFloat(e.target.value))} />
+            <span className="slider-value">{Math.round(eyeBrightness * 100)}%</span>
+          </div>
+        </div>
+
+        <div className="desktop-settings-actions">
+          <button className="desktop-btn-screenshot" onClick={() => { takeScreenshot(); setShowDesktopSettings(false); }}>
+            📸 Screenshot
+          </button>
+        </div>
       </div>
+    </div>
+  );
+
+  return (
+    <div className="desktop-layout">
+      {/* Fullscreen video area */}
+      <div className="desktop-video-area">{videoCanvas}</div>
+
+      {/* Shadow warning */}
+      {lowLightWarning && (
+        <div className="desktop-shadow-warning">
+          <span>⚠️</span> Poor lighting — add more light for accurate shade matching
+        </div>
+      )}
+
+      {/* ===== macOS-style Dock ===== */}
+      <div className="desktop-dock">
+        {/* 1. Foundation */}
+        <div className="dock-item" onClick={() => setShowFoundationTones(true)}>
+          <div className="dock-icon dock-icon-foundation" style={{ border: `3px solid ${foundationColor}` }} />
+          <div className={`dock-icon-indicator ${showFoundation ? 'active-indicator' : ''}`} style={{ backgroundColor: showFoundation ? foundationColor : 'rgba(255,255,255,0.2)' }} />
+          <span className="dock-label">Foundation</span>
+        </div>
+
+        {/* 2. Blush */}
+        <div className="dock-item" onClick={() => setShowBlushTones(true)}>
+          <div className="dock-icon dock-icon-blush" style={{ border: `3px solid ${blushColor}` }} />
+          <div className={`dock-icon-indicator ${showBlush ? 'active-indicator' : ''}`} style={{ backgroundColor: showBlush ? blushColor : 'rgba(255,255,255,0.2)' }} />
+          <span className="dock-label">Blush</span>
+        </div>
+
+        {/* 3. Lipstick */}
+        <div className="dock-item" onClick={() => setShowLipstickTones(true)}>
+          <div className="dock-icon dock-icon-lip" style={{ border: `3px solid ${lipColor}` }} />
+          <div className={`dock-icon-indicator ${showLip ? 'active-indicator' : ''}`} style={{ backgroundColor: showLip ? lipColor : 'rgba(255,255,255,0.2)' }} />
+          <span className="dock-label">Lipstick</span>
+        </div>
+
+        {/* 4. Lip Liner */}
+        <div className="dock-item" onClick={() => setShowLiplinerTones(true)}>
+          <div className="dock-icon dock-icon-liner" style={{ border: `3px solid ${lipLinerColor}` }} />
+          <div className={`dock-icon-indicator ${showLipLiner ? 'active-indicator' : ''}`} style={{ backgroundColor: showLipLiner ? lipLinerColor : 'rgba(255,255,255,0.2)' }} />
+          <span className="dock-label">Liner</span>
+        </div>
+
+        {/* Separator */}
+        <div className="dock-separator" />
+
+        {/* 5. Settings (gear) — all extra controls */}
+        <div className="dock-item" onClick={() => setShowDesktopSettings(true)}>
+          <div className="dock-icon dock-icon-settings">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+          </div>
+          <div className={`dock-icon-indicator ${showDesktopSettings ? 'active-indicator' : ''}`} style={{ backgroundColor: showDesktopSettings ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.2)' }} />
+          <span className="dock-label">Settings</span>
+        </div>
+      </div>
+
+      {/* Foundation tones picker overlay */}
+      {showFoundationTones && foundationTonesPanel}
+      {showBlushTones && blushTonesPanel}
+      {showLipstickTones && lipstickTonesPanel}
+      {showLiplinerTones && liplinerTonesPanel}
+
+      {/* Desktop color picker popup */}
+      {activeColorPicker && activeColorPicker !== 'foundation' && desktopColorPicker}
+
+      {/* Desktop settings panel */}
+      {desktopSettingsPanel}
     </div>
   );
 }
