@@ -583,7 +583,7 @@ function App() {
     canvasCtx.clearRect(0, 0, width, height);
     canvasCtx.drawImage(videoRef.current, 0, 0, width, height);
 
-    if (results.multiFaceLandmarks) {
+    if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
       const rawLandmarks = results.multiFaceLandmarks[0];
       // ── Завжди оновлюємо лендмарки (для detectVideoQuality) ──
       detectAndResetOnJump(rawLandmarks);
@@ -594,6 +594,12 @@ function App() {
       if (!lowLightWarningRef.current) {
         drawMakeup(canvasCtx, smoothed, state, width, height);
       }
+    } else {
+      // ── Обличчя пропало з кадру — скидаємо лендмарки та згладжування,
+      // щоб не малювати старий макіяж на чистому відео ──
+      latestLandmarksRef.current = null;
+      smoothedLandmarksRef.current = null;
+      isFirstFrameRef.current = true;
     }
 
     // ── Перевіряємо якість кожні 15 кадрів ──
@@ -602,9 +608,13 @@ function App() {
       const isBadQuality = detectVideoQuality(videoRef.current, latestLandmarksRef.current, width, height);
       lowLightWarningRef.current = isBadQuality;
       setLowLightWarning(isBadQuality);
+    } else if (frameCounterRef.current % 15 === 0 && videoRef.current && !latestLandmarksRef.current) {
+      // Обличчя немає — скидаємо попередження (не може бути поганого світла без обличчя)
+      lowLightWarningRef.current = false;
+      setLowLightWarning(false);
     }
 
-    // ── Skin smoothing тільки при хорошому освітленні ──
+    // ── Skin smoothing тільки при хорошому освітленні та якщо є обличчя ──
     const lm = latestLandmarksRef.current;
     if (state.skinSmooth && lm && state.skinSmoothStrength > 0 && !lowLightWarningRef.current) {
       applySkinSmoothing(canvasCtx, lm, width, height, state.skinSmoothStrength);
