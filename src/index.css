@@ -637,7 +637,7 @@ video, canvas {
 /* Mobile shadow warning positioned above controls-panel */
 .shadow-warning-overlay {
   position: absolute;
-  bottom: 90px;
+  bottom: 110px;
   left: 8px;
   right: 8px;
   z-index: 15;
@@ -645,6 +645,7 @@ video, canvas {
   padding: 6px 10px;
   margin: 0;
 }
+
 
 
 /* Range inputs */

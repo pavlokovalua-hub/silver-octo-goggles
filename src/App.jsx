@@ -12,7 +12,7 @@ const FOREHEAD_EXTEND_EYEBROW_OFFSET = 0.01;
 // ─────── Temporal landmark smoothing (low-pass filter for jitter reduction) ───────
 // Експоненційне ковзне середнє (EWMA) для усунення тремтіння лендмарків між кадрами.
 // Lower alpha = smoother but more lag; higher alpha = more responsive but more jitter
-const LANDMARK_SMOOTHING_ALPHA = 0.55;
+const LANDMARK_SMOOTHING_ALPHA = 0.7;
 
 // ─────── Модульні константи (лендмарки) ───────
 const FACE_OVAL = [
@@ -473,6 +473,76 @@ function App() {
     return (darkPixels / totalPixels) > DARK_RATIO_THRESHOLD;
   }
 
+  /**
+   * Аналізує зернистість (шум) відео в області обличчя.
+   * Коли камера працює в умовах недостатнього освітлення, вона піднімає ISO,
+   * що призводить до характерної зернистості зображення.
+   * 
+   * Метод: обчислює середню локальну варіацію пікселів у невеликих блоках
+   * в області обличчя. Високе значення свідчить про наявність шуму/зерна.
+   */
+  function detectExcessiveNoise(videoEl, landmarks, w, h) {
+    const sw = Math.round(w / 4);
+    const sh = Math.round(h / 4);
+    const frameCanvas = document.createElement('canvas');
+    frameCanvas.width = sw; frameCanvas.height = sh;
+    const frameCtx = frameCanvas.getContext('2d');
+    frameCtx.drawImage(videoEl, 0, 0, sw, sh);
+    const maskCanvas = document.createElement('canvas');
+    maskCanvas.width = sw; maskCanvas.height = sh;
+    const maskCtx = maskCanvas.getContext('2d');
+    maskCtx.fillStyle = '#000000';
+    maskCtx.fillRect(0, 0, sw, sh);
+    maskCtx.fillStyle = '#ffffff';
+    fillPathDirect(maskCtx, landmarks, FACE_OVAL, sw, sh);
+
+    const pixels = frameCtx.getImageData(0, 0, sw, sh).data;
+    const mask = maskCtx.getImageData(0, 0, sw, sh).data;
+    const blockSize = 4;
+
+    let totalGradient = 0;
+    let sampleCount = 0;
+
+    // Обчислюємо середній градієнт (різницю між сусідніми пікселями)
+    // в області обличчя. Висока середня різниця = зернистість/шум.
+    for (let y = 1; y < sh - 1; y++) {
+      for (let x = 1; x < sw - 1; x += blockSize) {
+        const idx = (y * sw + x) * 4;
+        if (mask[idx + 3] <= 128) continue;
+
+        // Беремо різницю між пікселем та його сусідами (як простий high-pass filter)
+        let localDiff = 0;
+        let localCount = 0;
+        for (let dy = -1; dy <= 1; dy++) {
+          for (let dx = -1; dx <= 1; dx++) {
+            if (dy === 0 && dx === 0) continue;
+            const ni = ((y + dy) * sw + (x + dx)) * 4;
+            if (mask[ni + 3] <= 128) continue;
+            // Різниця яскравості (luminance)
+            const lumCenter = 0.299 * pixels[idx] + 0.587 * pixels[idx + 1] + 0.114 * pixels[idx + 2];
+            const lumNeighbor = 0.299 * pixels[ni] + 0.587 * pixels[ni + 1] + 0.114 * pixels[ni + 2];
+            localDiff += Math.abs(lumCenter - lumNeighbor);
+            localCount++;
+          }
+        }
+        if (localCount > 0) {
+          totalGradient += localDiff / localCount;
+          sampleCount++;
+        }
+      }
+    }
+
+    if (sampleCount < 20) return false;
+    const avgGradient = totalGradient / sampleCount;
+
+    // Поріг для середнього градієнту:
+    // - < 5: гладке зображення, шуму майже немає
+    // - 5-8: помірний шум, допустимо
+    // - > 8: сильний шум/зернистість через високе ISO
+    const NOISE_GRADIENT_THRESHOLD = 8;
+    return avgGradient > NOISE_GRADIENT_THRESHOLD;
+  }
+
   function onResults(results) {
     const state = latestMakeupState.current;
     const canvasCtx = canvasRef.current.getContext('2d');
@@ -492,7 +562,9 @@ function App() {
     }
     frameCounterRef.current++;
     if (frameCounterRef.current % 15 === 0 && latestLandmarksRef.current && videoRef.current) {
-      setLowLightWarning(detectExcessiveShadows(videoRef.current, latestLandmarksRef.current, width, height));
+      const isTooDark = detectExcessiveShadows(videoRef.current, latestLandmarksRef.current, width, height);
+      const isTooNoisy = detectExcessiveNoise(videoRef.current, latestLandmarksRef.current, width, height);
+      setLowLightWarning(isTooDark || isTooNoisy);
     }
     const lm = latestLandmarksRef.current;
     if (state.skinSmooth && lm && state.skinSmoothStrength > 0) {
