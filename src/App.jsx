@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { FaceMesh } from '@mediapipe/face_mesh';
 import * as cam from '@mediapipe/camera_utils';
 import { applySkinSmoothing } from './skinSmoothing';
 import foundationsData from './datasets/foundations.json';
@@ -420,9 +419,13 @@ function App() {
       setCameraSupported(false);
       return;
     }
-    const FaceMeshConstructor = FaceMesh.FaceMesh || FaceMesh;
+    const FaceMesh = window.FaceMesh;
 
-    const faceMesh = new FaceMeshConstructor({
+    if (!FaceMesh) {
+      console.error("MediaPipe FaceMesh не завантажився з CDN!");
+    }
+
+    const faceMesh = new FaceMesh({
       locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
     });
     faceMesh.setOptions({
