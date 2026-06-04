@@ -1075,7 +1075,7 @@ function App() {
       <div className="control-group">
         <label className="block text-sm font-medium text-gray-300 mb-2">Eye Brightness: {Math.round(eyeBrightness * 100)}%</label>
         <input type="range" min="0" max="1" step="0.01" value={eyeBrightness} onChange={(e) => setEyeBrightness(parseFloat(e.target.value))} className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer range-lg" />
-        <p className="text-xs text-gray-400 mt-1">Освітлює білок очей для більш сяючого вигляду</p>
+        <p className="text-xs text-gray-400 mt-1">Whitens the eye area for a more radiant look</p>
       </div>
       <div className="control-group">
         <label className="block text-sm font-medium text-gray-300 mb-2">Lip Liner Color</label>
@@ -1151,7 +1151,7 @@ function App() {
         <div className="foundation-tones-header">
           <h3>Foundation Tones</h3>
           <div className="foundation-tones-actions">
-            <button className={`foundation-tones-disable ${showFoundation ? '' : 'active'}`} title="Вимкнути шар" onClick={() => { setFoundationColor(''); setShowFoundation(false); setShowFoundationTones(false); }}>
+            <button className={`foundation-tones-disable ${showFoundation ? '' : 'active'}`} title="Disable layer" onClick={() => { setFoundationColor(''); setShowFoundation(false); setShowFoundationTones(false); }}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <circle cx="10" cy="10" r="8" />
                 <line x1="5" y1="5" x2="15" y2="15" />
@@ -1165,19 +1165,19 @@ function App() {
             {/* Safe zone */}
             <div className="zone-group zone-safe">
               <div className="zone-label zone-label-safe">✅ Safe zone</div>
-              <div className="zone-desc zone-desc-safe">Тон, що ідеально підходить</div>
+              <div className="zone-desc zone-desc-safe">The perfect match</div>
               {renderToneZoneGrid(toneZones.safeZone, 'zone-grid-safe')}
             </div>
             {/* Green zone */}
             <div className="zone-group zone-green">
               <div className="zone-label zone-label-green">🟢 Green zone</div>
-              <div className="zone-desc zone-desc-green">Тони, які з великою ймовірністю підійдуть</div>
+              <div className="zone-desc zone-desc-green">High probability of a good match</div>
               {renderToneZoneGrid(toneZones.greenZone, 'zone-grid-green')}
             </div>
             {/* Unpredictable zone */}
             <div className="zone-group zone-unpredictable">
               <div className="zone-label zone-label-unpredictable">🟡 Unpredictable zone</div>
-              <div className="zone-desc zone-desc-unpredictable">Тони, які можуть дати непередбачуваний результат</div>
+              <div className="zone-desc zone-desc-unpredictable">Tones with unpredictable results</div>
               {renderToneZoneGrid(toneZones.unpredictableZone, 'zone-grid-unpredictable')}
             </div>
           </div>
@@ -1229,7 +1229,7 @@ function App() {
         <div className="foundation-tones-header">
           <h3>Blush Tones</h3>
           <div className="foundation-tones-actions">
-            <button className={`foundation-tones-disable ${showBlush ? '' : 'active'}`} title="Вимкнути шар" onClick={() => { setBlushColor(''); setShowBlush(false); setShowBlushTones(false); }}>
+            <button className={`foundation-tones-disable ${showBlush ? '' : 'active'}`} title="Disable layer" onClick={() => { setBlushColor(''); setShowBlush(false); setShowBlushTones(false); }}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <circle cx="10" cy="10" r="8" />
                 <line x1="5" y1="5" x2="15" y2="15" />
@@ -1243,19 +1243,19 @@ function App() {
             {/* Safe zone */}
             <div className="zone-group zone-safe">
               <div className="zone-label zone-label-safe">✅ Safe zone</div>
-              <div className="zone-desc zone-desc-safe">Тон, що ідеально підходить</div>
+              <div className="zone-desc zone-desc-safe">The perfect match</div>
               {renderBlushZoneGrid(blushZones.safeZone, 'zone-grid-safe')}
             </div>
             {/* Green zone */}
             <div className="zone-group zone-green">
               <div className="zone-label zone-label-green">🟢 Green zone</div>
-              <div className="zone-desc zone-desc-green">Тони, які з великою ймовірністю підійдуть</div>
+              <div className="zone-desc zone-desc-green">High probability of a good match</div>
               {renderBlushZoneGrid(blushZones.greenZone, 'zone-grid-green')}
             </div>
             {/* Unpredictable zone */}
             <div className="zone-group zone-unpredictable">
               <div className="zone-label zone-label-unpredictable">🟡 Unpredictable zone</div>
-              <div className="zone-desc zone-desc-unpredictable">Тони, які можуть дати непередбачуваний результат</div>
+              <div className="zone-desc zone-desc-unpredictable">Tones with unpredictable results</div>
               {renderBlushZoneGrid(blushZones.unpredictableZone, 'zone-grid-unpredictable')}
             </div>
           </div>
@@ -1307,7 +1307,7 @@ function App() {
         <div className="foundation-tones-header">
           <h3>Lipstick Tones</h3>
           <div className="foundation-tones-actions">
-            <button className={`foundation-tones-disable ${showLip ? '' : 'active'}`} title="Вимкнути шар" onClick={() => { setLipColor(''); setShowLip(false); setShowLipstickTones(false); }}>
+            <button className={`foundation-tones-disable ${showLip ? '' : 'active'}`} title="Disable layer" onClick={() => { setLipColor(''); setShowLip(false); setShowLipstickTones(false); }}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <circle cx="10" cy="10" r="8" />
                 <line x1="5" y1="5" x2="15" y2="15" />
@@ -1321,19 +1321,19 @@ function App() {
             {/* Safe zone */}
             <div className="zone-group zone-safe">
               <div className="zone-label zone-label-safe">✅ Safe zone</div>
-              <div className="zone-desc zone-desc-safe">Тон, що ідеально підходить</div>
+              <div className="zone-desc zone-desc-safe">The perfect match</div>
               {renderLipstickZoneGrid(lipstickZones.safeZone, 'zone-grid-safe')}
             </div>
             {/* Green zone */}
             <div className="zone-group zone-green">
               <div className="zone-label zone-label-green">🟢 Green zone</div>
-              <div className="zone-desc zone-desc-green">Тони, які з великою ймовірністю підійдуть</div>
+              <div className="zone-desc zone-desc-green">High probability of a good match</div>
               {renderLipstickZoneGrid(lipstickZones.greenZone, 'zone-grid-green')}
             </div>
             {/* Unpredictable zone */}
             <div className="zone-group zone-unpredictable">
               <div className="zone-label zone-label-unpredictable">🟡 Unpredictable zone</div>
-              <div className="zone-desc zone-desc-unpredictable">Тони, які можуть дати непередбачуваний результат</div>
+              <div className="zone-desc zone-desc-unpredictable">Tones with unpredictable results</div>
               {renderLipstickZoneGrid(lipstickZones.unpredictableZone, 'zone-grid-unpredictable')}
             </div>
           </div>
@@ -1385,7 +1385,7 @@ function App() {
         <div className="foundation-tones-header">
           <h3>Lipliner Tones</h3>
           <div className="foundation-tones-actions">
-            <button className={`foundation-tones-disable ${showLipLiner ? '' : 'active'}`} title="Вимкнути шар" onClick={() => { setLipLinerColor(''); setShowLipLiner(false); setShowLiplinerTones(false); }}>
+            <button className={`foundation-tones-disable ${showLipLiner ? '' : 'active'}`} title="Disable layer" onClick={() => { setLipLinerColor(''); setShowLipLiner(false); setShowLiplinerTones(false); }}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <circle cx="10" cy="10" r="8" />
                 <line x1="5" y1="5" x2="15" y2="15" />
@@ -1399,19 +1399,19 @@ function App() {
             {/* Safe zone */}
             <div className="zone-group zone-safe">
               <div className="zone-label zone-label-safe">✅ Safe zone</div>
-              <div className="zone-desc zone-desc-safe">Тон, що ідеально підходить</div>
+              <div className="zone-desc zone-desc-safe">The perfect match</div>
               {renderLiplinerZoneGrid(liplinerZones.safeZone, 'zone-grid-safe')}
             </div>
             {/* Green zone */}
             <div className="zone-group zone-green">
               <div className="zone-label zone-label-green">🟢 Green zone</div>
-              <div className="zone-desc zone-desc-green">Тони, які з великою ймовірністю підійдуть</div>
+              <div className="zone-desc zone-desc-green">High probability of a good match</div>
               {renderLiplinerZoneGrid(liplinerZones.greenZone, 'zone-grid-green')}
             </div>
             {/* Unpredictable zone */}
             <div className="zone-group zone-unpredictable">
               <div className="zone-label zone-label-unpredictable">🟡 Unpredictable zone</div>
-              <div className="zone-desc zone-desc-unpredictable">Тони, які можуть дати непередбачуваний результат</div>
+              <div className="zone-desc zone-desc-unpredictable">Tones with unpredictable results</div>
               {renderLiplinerZoneGrid(liplinerZones.unpredictableZone, 'zone-grid-unpredictable')}
             </div>
           </div>
@@ -1438,11 +1438,11 @@ function App() {
   );
 
   const pickerMeta = {
-    foundation: { title: 'Тональний крем', currentColor: foundationColor, setColor: setFoundationColor, swatches: ['#f3cfb3', '#e4b38d', '#d3a17e', '#c68e65', '#8d5524', '#5c381a', '#3e2211', '#f5e0cc'], show: showFoundation, toggle: () => setShowFoundation(v => !v), setShow: setShowFoundation },
-    blush: { title: "Рум'яна", currentColor: blushColor, setColor: setBlushColor, swatches: ['#FF9999', '#FFCCCC', '#F08080', '#CD5C5C', '#E9967A', '#FFA07A', '#FFB6C1', '#FF69B4'], show: showBlush, toggle: () => setShowBlush(v => !v), setShow: setShowBlush },
-    lip: { title: 'Помада', currentColor: lipColor, setColor: setLipColor, swatches: ['#CC3333', '#FF6699', '#EE82EE', '#A0522D', '#8B0000', '#FFD700', '#DC143C', '#C71585'], show: showLip, toggle: () => setShowLip(v => !v), setShow: setShowLip },
-    gloss: { title: 'Блиск для губ', currentColor: lipGlossColor, setColor: setLipGlossColor, swatches: ['#FFD6E8', '#FFD700', '#FFE4B5', '#F5DEB3', '#E0F0FF', '#FFC0CB', '#DDA0DD', '#FFF0F5'], show: showGloss, toggle: () => setShowGloss(v => !v), setShow: setShowGloss },
-    lipLiner: { title: 'Контур для губ', currentColor: lipLinerColor, setColor: setLipLinerColor, swatches: ['#8B0000', '#A0522D', '#CD5C5C', '#800020', '#483C32', '#660000', '#4A0404', '#2C1608'], show: showLipLiner, toggle: () => setShowLipLiner(v => !v), setShow: setShowLipLiner },
+    foundation: { title: 'Foundation', currentColor: foundationColor, setColor: setFoundationColor, swatches: ['#f3cfb3', '#e4b38d', '#d3a17e', '#c68e65', '#8d5524', '#5c381a', '#3e2211', '#f5e0cc'], show: showFoundation, toggle: () => setShowFoundation(v => !v), setShow: setShowFoundation },
+    blush: { title: 'Blush', currentColor: blushColor, setColor: setBlushColor, swatches: ['#FF9999', '#FFCCCC', '#F08080', '#CD5C5C', '#E9967A', '#FFA07A', '#FFB6C1', '#FF69B4'], show: showBlush, toggle: () => setShowBlush(v => !v), setShow: setShowBlush },
+    lip: { title: 'Lipstick', currentColor: lipColor, setColor: setLipColor, swatches: ['#CC3333', '#FF6699', '#EE82EE', '#A0522D', '#8B0000', '#FFD700', '#DC143C', '#C71585'], show: showLip, toggle: () => setShowLip(v => !v), setShow: setShowLip },
+    gloss: { title: 'Lip Gloss', currentColor: lipGlossColor, setColor: setLipGlossColor, swatches: ['#FFD6E8', '#FFD700', '#FFE4B5', '#F5DEB3', '#E0F0FF', '#FFC0CB', '#DDA0DD', '#FFF0F5'], show: showGloss, toggle: () => setShowGloss(v => !v), setShow: setShowGloss },
+    lipLiner: { title: 'Lip Liner', currentColor: lipLinerColor, setColor: setLipLinerColor, swatches: ['#8B0000', '#A0522D', '#CD5C5C', '#800020', '#483C32', '#660000', '#4A0404', '#2C1608'], show: showLipLiner, toggle: () => setShowLipLiner(v => !v), setShow: setShowLipLiner },
   };
 
   const activePicker = activeColorPicker ? pickerMeta[activeColorPicker] : null;
@@ -1453,7 +1453,7 @@ function App() {
         <div className="color-picker-header">
           <h3>{activePicker.title}</h3>
           <div className="foundation-tones-actions">
-            <button className={`foundation-tones-disable ${activePicker.show ? '' : 'active'}`} title="Вимкнути шар" onClick={() => { activePicker.setColor(''); activePicker.setShow(false); setActiveColorPicker(null); }}>
+            <button className={`foundation-tones-disable ${activePicker.show ? '' : 'active'}`} title="Disable layer" onClick={() => { activePicker.setColor(''); activePicker.setShow(false); setActiveColorPicker(null); }}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <circle cx="10" cy="10" r="8" />
                 <line x1="5" y1="5" x2="15" y2="15" />
@@ -1468,12 +1468,12 @@ function App() {
           ))}
         </div>
         <div className="custom-color-row">
-          <label>Свій колір</label>
+          <label>Custom color</label>
           <input type="color" value={activePicker.currentColor} onChange={(e) => { activePicker.setColor(e.target.value); activePicker.setShow(true); setActiveColorPicker(null); }} />
         </div>
         <div className="bottom-actions">
-          <button className="btn-compare" onClick={() => { activePicker.toggle(); setActiveColorPicker(null); }}>{activePicker.show ? 'Прибрати шар' : 'Показати шар'}</button>
-          <button className="btn-screenshot" onClick={() => { takeScreenshot(); setActiveColorPicker(null); }}>Фото</button>
+          <button className="btn-compare" onClick={() => { activePicker.toggle(); setActiveColorPicker(null); }}>{activePicker.show ? 'Hide layer' : 'Show layer'}</button>
+          <button className="btn-screenshot" onClick={() => { takeScreenshot(); setActiveColorPicker(null); }}>Screenshot</button>
         </div>
       </div>
     </div>
@@ -1498,7 +1498,7 @@ function App() {
         <div className="desktop-color-picker-header">
           <h3>{activePicker.title}</h3>
           <div className="picker-actions">
-            <button className={`foundation-tones-disable ${activePicker.show ? '' : 'active'}`} title="Вимкнути шар" onClick={() => { activePicker.setColor(''); activePicker.setShow(false); setActiveColorPicker(null); }}>
+            <button className={`foundation-tones-disable ${activePicker.show ? '' : 'active'}`} title="Disable layer" onClick={() => { activePicker.setColor(''); activePicker.setShow(false); setActiveColorPicker(null); }}>
               <svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.5">
                 <circle cx="10" cy="10" r="8" />
                 <line x1="5" y1="5" x2="15" y2="15" />
@@ -1513,12 +1513,12 @@ function App() {
           ))}
         </div>
         <div className="desktop-custom-color-row">
-          <label>Свій колір</label>
+          <label>Custom color</label>
           <input type="color" value={activePicker.currentColor} onChange={(e) => { activePicker.setColor(e.target.value); activePicker.setShow(true); setActiveColorPicker(null); }} />
         </div>
         <div className="desktop-picker-actions">
-          <button className={`toggle-layer-btn ${activePicker.show ? '' : 'hidden'}`} onClick={() => { activePicker.toggle(); setActiveColorPicker(null); }}>{activePicker.show ? 'Прибрати шар' : 'Показати шар'}</button>
-          <button className="picker-screenshot-btn" onClick={() => { takeScreenshot(); setActiveColorPicker(null); }}>Фото</button>
+          <button className={`toggle-layer-btn ${activePicker.show ? '' : 'hidden'}`} onClick={() => { activePicker.toggle(); setActiveColorPicker(null); }}>{activePicker.show ? 'Hide layer' : 'Show layer'}</button>
+          <button className="picker-screenshot-btn" onClick={() => { takeScreenshot(); setActiveColorPicker(null); }}>Screenshot</button>
         </div>
       </div>
     </div>
