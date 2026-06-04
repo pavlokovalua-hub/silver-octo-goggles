@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import * as cam from '@mediapipe/camera_utils';
 import { applySkinSmoothing } from './skinSmoothing';
 import foundationsData from './datasets/foundations.json';
 import blushData from './datasets/blush.json';
@@ -439,11 +438,11 @@ function App() {
     if (videoRef.current) {
 
 
-    const MediaPipeCamera = window.Camera;
+      const MediaPipeCamera = window.Camera;
 
-    if (!MediaPipeCamera) {
-      console.error("MediaPipe Camera інструменти не завантажилися з CDN!");
-    }
+      if (!MediaPipeCamera) {
+        console.error("MediaPipe Camera інструменти не завантажилися з CDN!");
+      }
 
       const camera = new MediaPipeCamera(videoRef.current, {
         onFrame: async () => { await faceMesh.send({ image: videoRef.current }); },
