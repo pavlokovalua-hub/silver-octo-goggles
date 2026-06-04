@@ -96,22 +96,11 @@ video, canvas {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background: #000;
+    background: transparent;
   }
 
   .video-area .input_video {
     display: none;
-  }
-
-  .video-area canvas {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    height: 100%;
-    width: auto;
-    max-width: none;
-    min-height: 100%;
-    transform: translateX(-50%) scaleX(-1);
   }
 
   .controls-panel {
@@ -387,6 +376,42 @@ video, canvas {
   }
 }
 
+/* ════════════════════════════════════════════════════════════════
+   СТАБІЛЬНИЙ КОНТЕЙНЕР для <video> та <canvas>
+   Рендериться завжди, не залежить від layout (mobile/desktop).
+   <video> hidden, <canvas> заповнює весь екран.
+   ════════════════════════════════════════════════════════════════ */
+.app-video-persistent {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+  background: transparent;
+}
+
+.app-video-persistent video {
+  display: none;
+}
+
+.app-video-persistent canvas {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+  transform: scaleX(-1);
+}
+
+.app-video-persistent.has-lighting {
+  clip-path: inset(60px);
+  z-index: 2;
+}
+
 /* ===== DESKTOP LAYOUT ===== */
 @media (min-width: 1024px) {
   .mobile-layout {
@@ -422,7 +447,7 @@ video, canvas {
     width: 100vw;
     height: 100vh;
     overflow: hidden;
-    background: #000;
+    background: transparent;
   }
 
   .desktop-video-area {
@@ -432,26 +457,11 @@ video, canvas {
     width: 100%;
     height: 100%;
     overflow: hidden;
-    background: #000;
+    background: transparent;
   }
 
   .desktop-video-area .input_video {
     display: none;
-  }
-
-  .desktop-video-area video {
-    display: none;
-  }
-
-  .desktop-video-area canvas {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    height: 100%;
-    width: auto;
-    max-width: none;
-    min-height: 100%;
-    transform: translateX(-50%) scaleX(-1);
   }
 
   /* ===== DOCK ===== */
@@ -933,22 +943,9 @@ video, canvas {
     width: auto;
     height: auto;
     overflow: hidden;
-    background: #000;
+    background: transparent;
     z-index: 2;
     border-radius: 0;
-    background: white;
-  }
-
-  .desktop-video-area.has-lighting canvas {
-    position: absolute;
-    top: 0;
-    left: 50%;
-    height: 100%;
-    width: auto;
-    max-width: none;
-    min-height: 100%;
-    transform: translateX(-50%) scaleX(-1);
-    border-radius: 6px;
   }
 }
 

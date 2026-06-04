@@ -1110,13 +1110,6 @@ function App() {
     </>
   );
 
-  const videoCanvas = (
-    <>
-      <video ref={videoRef} style={{ display: 'none' }} autoPlay muted playsInline />
-      <canvas ref={canvasRef} width="640" height="480" />
-    </>
-  );
-
   // ───── Foundation / Blush / Lipstick / Lipliner tones picker ─────
   const [showFoundationTones, setShowFoundationTones] = useState(false);
   const [showBlushTones, setShowBlushTones] = useState(false);
@@ -1486,41 +1479,17 @@ function App() {
     </div>
   );
 
-  if (isMobile) {
-    return (
-      <div className="mobile-layout">
-        <div className="video-area">{videoCanvas}</div>
-        {lowLightWarning && (
-          <div className="shadow-warning shadow-warning-overlay"><span>⚠</span> Poor lighting — add more light for accurate shade matching</div>
-        )}
-        <div className="controls-panel">
-          <div className="color-buttons">
-            <div className="color-btn-wrapper">
-              <button className={`color-btn color-btn-foundation ${activeColorPicker === 'foundation' || showFoundationTones ? 'active' : ''}`} style={{ border: `5px solid ${foundationColor}` }} onClick={() => setShowFoundationTones(true)} />
-              <span className="color-btn-label">Foundation</span>
-            </div>
-            <div className="color-btn-wrapper">
-              <button className={`color-btn color-btn-blush ${showBlushTones ? 'active' : ''}`} style={{ border: `5px solid ${blushColor}` }} onClick={() => setShowBlushTones(true)} />
-              <span className="color-btn-label">Blush</span>
-            </div>
-            <div className="color-btn-wrapper">
-              <button className={`color-btn color-btn-lip ${showLipstickTones ? 'active' : ''}`} style={{ border: `5px solid ${lipColor}` }} onClick={() => setShowLipstickTones(true)} />
-              <span className="color-btn-label">Lipstick</span>
-            </div>
-            <div className="color-btn-wrapper">
-              <button className={`color-btn color-btn-liner ${showLiplinerTones ? 'active' : ''}`} style={{ border: `5px solid ${lipLinerColor}` }} onClick={() => setShowLiplinerTones(true)} />
-              <span className="color-btn-label">Liner</span>
-            </div>
-          </div>
-        </div>
-        {activeColorPicker && activeColorPicker !== 'foundation' && colorPickerOverlay}
-        {showFoundationTones && foundationTonesPanel}
-        {showBlushTones && blushTonesPanel}
-        {showLipstickTones && lipstickTonesPanel}
-        {showLiplinerTones && liplinerTonesPanel}
-      </div>
-    );
-  }
+  // ════════════════════════════════════════════════════════════════
+  // СТАБІЛЬНИЙ КОНТЕЙНЕР для <video> та <canvas>
+  // Рендериться завжди, ніколи не демонтується при зміні layout,
+  // тому MediaPipe Camera не втрачає посилання на video елемент.
+  // ════════════════════════════════════════════════════════════════
+  const persistentVideoContainer = (
+    <div className={`app-video-persistent${showSideLighting && !isMobile ? ' has-lighting' : ''}`}>
+      <video ref={videoRef} style={{ display: 'none' }} autoPlay muted playsInline />
+      <canvas ref={canvasRef} width="640" height="480" />
+    </div>
+  );
 
   // ───── Desktop color picker popup ─────
   const desktopColorPicker = activePicker && (
@@ -1625,102 +1594,131 @@ function App() {
     </div>
   );
 
-  // ───── Desktop video area with optional lighting frame ─────
-  // ВАЖЛИВО: video/canvas завжди знаходяться всередині desktop-video-area,
-  // який ніколи не перемонтовується. При ввімкненні освітлення додається
-  // desktop-lighting-frame (позаду) + desktop-video-area зменшується (60px відступи),
-  // що створює рамку навколо відео.
-  const desktopVideoSection = (
-    <div className="desktop-layout-inner">
-      {showSideLighting && <div className="desktop-lighting-frame" />}
-      <div className={`desktop-video-area ${showSideLighting ? 'has-lighting' : ''}`}>
-        {videoCanvas}
-      </div>
-    </div>
-  );
-
   return (
-    <div className="desktop-layout">
-      {/* Fullscreen video area (with or without side lighting) */}
-      {desktopVideoSection}
+    <>
+      {/* ═══ СТАБІЛЬНЕ ВІДЕО/КАНВАС — завжди змонтовано ═══ */}
+      {persistentVideoContainer}
 
-      {/* Shadow warning */}
-      {lowLightWarning && (
-        <div className="desktop-shadow-warning">
-          <span>⚠️</span> Poor lighting — add more light for accurate shade matching
+      {isMobile ? (
+        /* ═══ МОБІЛЬНИЙ LAYOUT ═══ */
+        <div className="mobile-layout">
+          <div className="video-area" />
+          {lowLightWarning && (
+            <div className="shadow-warning shadow-warning-overlay"><span>⚠</span> Poor lighting — add more light for accurate shade matching</div>
+          )}
+          <div className="controls-panel">
+            <div className="color-buttons">
+              <div className="color-btn-wrapper">
+                <button className={`color-btn color-btn-foundation ${activeColorPicker === 'foundation' || showFoundationTones ? 'active' : ''}`} style={{ border: `5px solid ${foundationColor}` }} onClick={() => setShowFoundationTones(true)} />
+                <span className="color-btn-label">Foundation</span>
+              </div>
+              <div className="color-btn-wrapper">
+                <button className={`color-btn color-btn-blush ${showBlushTones ? 'active' : ''}`} style={{ border: `5px solid ${blushColor}` }} onClick={() => setShowBlushTones(true)} />
+                <span className="color-btn-label">Blush</span>
+              </div>
+              <div className="color-btn-wrapper">
+                <button className={`color-btn color-btn-lip ${showLipstickTones ? 'active' : ''}`} style={{ border: `5px solid ${lipColor}` }} onClick={() => setShowLipstickTones(true)} />
+                <span className="color-btn-label">Lipstick</span>
+              </div>
+              <div className="color-btn-wrapper">
+                <button className={`color-btn color-btn-liner ${showLiplinerTones ? 'active' : ''}`} style={{ border: `5px solid ${lipLinerColor}` }} onClick={() => setShowLiplinerTones(true)} />
+                <span className="color-btn-label">Liner</span>
+              </div>
+            </div>
+          </div>
+          {activeColorPicker && activeColorPicker !== 'foundation' && colorPickerOverlay}
+          {showFoundationTones && foundationTonesPanel}
+          {showBlushTones && blushTonesPanel}
+          {showLipstickTones && lipstickTonesPanel}
+          {showLiplinerTones && liplinerTonesPanel}
+        </div>
+      ) : (
+        /* ═══ ДЕСКТОПНИЙ LAYOUT ═══ */
+        <div className="desktop-layout">
+          <div className="desktop-layout-inner">
+            {showSideLighting && <div className="desktop-lighting-frame" />}
+            <div className={`desktop-video-area ${showSideLighting ? 'has-lighting' : ''}`} />
+          </div>
+
+          {/* Shadow warning */}
+          {lowLightWarning && (
+            <div className="desktop-shadow-warning">
+              <span>⚠️</span> Poor lighting — add more light for accurate shade matching
+            </div>
+          )}
+
+          {/* ===== macOS-style Dock ===== */}
+          <div className="desktop-dock">
+            {/* 1. Foundation */}
+            <div className="dock-item" onClick={() => setShowFoundationTones(true)}>
+              <div className="dock-icon dock-icon-foundation" style={{ border: `3px solid ${foundationColor}` }} />
+              <div className={`dock-icon-indicator ${showFoundation ? 'active-indicator' : ''}`} style={{ backgroundColor: showFoundation ? foundationColor : 'rgba(255,255,255,0.2)' }} />
+              <span className="dock-label">Foundation</span>
+            </div>
+
+            {/* 2. Blush */}
+            <div className="dock-item" onClick={() => setShowBlushTones(true)}>
+              <div className="dock-icon dock-icon-blush" style={{ border: `3px solid ${blushColor}` }} />
+              <div className={`dock-icon-indicator ${showBlush ? 'active-indicator' : ''}`} style={{ backgroundColor: showBlush ? blushColor : 'rgba(255,255,255,0.2)' }} />
+              <span className="dock-label">Blush</span>
+            </div>
+
+            {/* 3. Lipstick */}
+            <div className="dock-item" onClick={() => setShowLipstickTones(true)}>
+              <div className="dock-icon dock-icon-lip" style={{ border: `3px solid ${lipColor}` }} />
+              <div className={`dock-icon-indicator ${showLip ? 'active-indicator' : ''}`} style={{ backgroundColor: showLip ? lipColor : 'rgba(255,255,255,0.2)' }} />
+              <span className="dock-label">Lipstick</span>
+            </div>
+
+            {/* 4. Lip Liner */}
+            <div className="dock-item" onClick={() => setShowLiplinerTones(true)}>
+              <div className="dock-icon dock-icon-liner" style={{ border: `3px solid ${lipLinerColor}` }} />
+              <div className={`dock-icon-indicator ${showLipLiner ? 'active-indicator' : ''}`} style={{ backgroundColor: showLipLiner ? lipLinerColor : 'rgba(255,255,255,0.2)' }} />
+              <span className="dock-label">Liner</span>
+            </div>
+
+            {/* Separator */}
+            <div className="dock-separator" />
+
+            {/* 5. Side Lighting */}
+            <div className="dock-item" onClick={() => setShowSideLighting(v => !v)}>
+              <div className="dock-icon" style={{ background: showSideLighting ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 26, height: 26, color: showSideLighting ? '#fff' : 'rgba(255,255,255,0.7)' }}>
+                  <circle cx="12" cy="12" r="5" />
+                  <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+                </svg>
+              </div>
+              <div className={`dock-icon-indicator ${showSideLighting ? 'active-indicator' : ''}`} style={{ backgroundColor: showSideLighting ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.2)' }} />
+              <span className="dock-label">Lighting</span>
+            </div>
+
+            {/* 6. Settings (gear) — all extra controls */}
+            <div className="dock-item" onClick={() => setShowDesktopSettings(true)}>
+              <div className="dock-icon dock-icon-settings">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+              </div>
+              <div className={`dock-icon-indicator ${showDesktopSettings ? 'active-indicator' : ''}`} style={{ backgroundColor: showDesktopSettings ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.2)' }} />
+              <span className="dock-label">Settings</span>
+            </div>
+          </div>
+
+          {/* Foundation tones picker overlay */}
+          {showFoundationTones && foundationTonesPanel}
+          {showBlushTones && blushTonesPanel}
+          {showLipstickTones && lipstickTonesPanel}
+          {showLiplinerTones && liplinerTonesPanel}
+
+          {/* Desktop color picker popup */}
+          {activeColorPicker && activeColorPicker !== 'foundation' && desktopColorPicker}
+
+          {/* Desktop settings panel */}
+          {desktopSettingsPanel}
         </div>
       )}
-
-      {/* ===== macOS-style Dock ===== */}
-      <div className="desktop-dock">
-        {/* 1. Foundation */}
-        <div className="dock-item" onClick={() => setShowFoundationTones(true)}>
-          <div className="dock-icon dock-icon-foundation" style={{ border: `3px solid ${foundationColor}` }} />
-          <div className={`dock-icon-indicator ${showFoundation ? 'active-indicator' : ''}`} style={{ backgroundColor: showFoundation ? foundationColor : 'rgba(255,255,255,0.2)' }} />
-          <span className="dock-label">Foundation</span>
-        </div>
-
-        {/* 2. Blush */}
-        <div className="dock-item" onClick={() => setShowBlushTones(true)}>
-          <div className="dock-icon dock-icon-blush" style={{ border: `3px solid ${blushColor}` }} />
-          <div className={`dock-icon-indicator ${showBlush ? 'active-indicator' : ''}`} style={{ backgroundColor: showBlush ? blushColor : 'rgba(255,255,255,0.2)' }} />
-          <span className="dock-label">Blush</span>
-        </div>
-
-        {/* 3. Lipstick */}
-        <div className="dock-item" onClick={() => setShowLipstickTones(true)}>
-          <div className="dock-icon dock-icon-lip" style={{ border: `3px solid ${lipColor}` }} />
-          <div className={`dock-icon-indicator ${showLip ? 'active-indicator' : ''}`} style={{ backgroundColor: showLip ? lipColor : 'rgba(255,255,255,0.2)' }} />
-          <span className="dock-label">Lipstick</span>
-        </div>
-
-        {/* 4. Lip Liner */}
-        <div className="dock-item" onClick={() => setShowLiplinerTones(true)}>
-          <div className="dock-icon dock-icon-liner" style={{ border: `3px solid ${lipLinerColor}` }} />
-          <div className={`dock-icon-indicator ${showLipLiner ? 'active-indicator' : ''}`} style={{ backgroundColor: showLipLiner ? lipLinerColor : 'rgba(255,255,255,0.2)' }} />
-          <span className="dock-label">Liner</span>
-        </div>
-
-        {/* Separator */}
-        <div className="dock-separator" />
-
-        {/* 5. Side Lighting */}
-        <div className="dock-item" onClick={() => setShowSideLighting(v => !v)}>
-          <div className="dock-icon" style={{ background: showSideLighting ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 26, height: 26, color: showSideLighting ? '#fff' : 'rgba(255,255,255,0.7)' }}>
-              <circle cx="12" cy="12" r="5" />
-              <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
-            </svg>
-          </div>
-          <div className={`dock-icon-indicator ${showSideLighting ? 'active-indicator' : ''}`} style={{ backgroundColor: showSideLighting ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.2)' }} />
-          <span className="dock-label">Lighting</span>
-        </div>
-
-        {/* 6. Settings (gear) — all extra controls */}
-        <div className="dock-item" onClick={() => setShowDesktopSettings(true)}>
-          <div className="dock-icon dock-icon-settings">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3" />
-              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-            </svg>
-          </div>
-          <div className={`dock-icon-indicator ${showDesktopSettings ? 'active-indicator' : ''}`} style={{ backgroundColor: showDesktopSettings ? 'rgba(255,255,255,0.7)' : 'rgba(255,255,255,0.2)' }} />
-          <span className="dock-label">Settings</span>
-        </div>
-      </div>
-
-      {/* Foundation tones picker overlay */}
-      {showFoundationTones && foundationTonesPanel}
-      {showBlushTones && blushTonesPanel}
-      {showLipstickTones && lipstickTonesPanel}
-      {showLiplinerTones && liplinerTonesPanel}
-
-      {/* Desktop color picker popup */}
-      {activeColorPicker && activeColorPicker !== 'foundation' && desktopColorPicker}
-
-      {/* Desktop settings panel */}
-      {desktopSettingsPanel}
-    </div>
+    </>
   );
 }
 
