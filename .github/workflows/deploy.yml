@@ -17,7 +17,7 @@ jobs:
   deploy:
     environment:
       name: github-pages
-      url: ${{ steps:deployment.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -33,12 +33,12 @@ jobs:
         run: npm ci
 
       - name: Build project
-        run: npm run build # тут створюється твоя папка dist
+        run: npm run build
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist' # Вказуємо GitHub Actions, що деплоїти треба саме вміст dist
+          path: './dist'
 
       - name: Deploy to GitHub Pages
         id: deployment
