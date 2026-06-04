@@ -903,6 +903,53 @@ video, canvas {
     opacity: 1;
     transition: opacity 0.5s ease;
   }
+
+  /* ===== SIDE LIGHTING — рамка навколо відео ===== */
+  .desktop-layout-inner {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+  }
+
+  .desktop-lighting-frame {
+    background: white;
+    border-radius: 50px;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+  }
+
+  .desktop-video-area.has-lighting {
+    position: absolute;
+    top: 60px;
+    left: 60px;
+    right: 60px;
+    bottom: 60px;
+    width: auto;
+    height: auto;
+    overflow: hidden;
+    background: #000;
+    z-index: 2;
+    border-radius: 0;
+    background: white;
+  }
+
+  .desktop-video-area.has-lighting canvas {
+    position: absolute;
+    top: 0;
+    left: 50%;
+    height: 100%;
+    width: auto;
+    max-width: none;
+    min-height: 100%;
+    transform: translateX(-50%) scaleX(-1);
+    border-radius: 6px;
+  }
 }
 
 /* ===== FOUNDATION TONES ZONES ===== */

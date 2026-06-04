@@ -339,6 +339,7 @@ function App() {
   const [skinSmooth, setSkinSmooth] = useState(latestMakeupState.current.skinSmooth);
   const [skinSmoothStrength, setSkinSmoothStrength] = useState(latestMakeupState.current.skinSmoothStrength);
   const [eyeBrightness, setEyeBrightness] = useState(latestMakeupState.current.eyeBrightness);
+  const [showSideLighting, setShowSideLighting] = useState(false);
   const [cameraSupported, setCameraSupported] = useState(true);
   const [lowLightWarning, setLowLightWarning] = useState(false);
   const lowLightWarningRef = useRef(false); // синхронізується з lowLightWarning для використання в onResults (closure)
@@ -1624,10 +1625,24 @@ function App() {
     </div>
   );
 
+  // ───── Desktop video area with optional lighting frame ─────
+  // ВАЖЛИВО: video/canvas завжди знаходяться всередині desktop-video-area,
+  // який ніколи не перемонтовується. При ввімкненні освітлення додається
+  // desktop-lighting-frame (позаду) + desktop-video-area зменшується (60px відступи),
+  // що створює рамку навколо відео.
+  const desktopVideoSection = (
+    <div className="desktop-layout-inner">
+      {showSideLighting && <div className="desktop-lighting-frame" />}
+      <div className={`desktop-video-area ${showSideLighting ? 'has-lighting' : ''}`}>
+        {videoCanvas}
+      </div>
+    </div>
+  );
+
   return (
     <div className="desktop-layout">
-      {/* Fullscreen video area */}
-      <div className="desktop-video-area">{videoCanvas}</div>
+      {/* Fullscreen video area (with or without side lighting) */}
+      {desktopVideoSection}
 
       {/* Shadow warning */}
       {lowLightWarning && (
@@ -1669,7 +1684,19 @@ function App() {
         {/* Separator */}
         <div className="dock-separator" />
 
-        {/* 5. Settings (gear) — all extra controls */}
+        {/* 5. Side Lighting */}
+        <div className="dock-item" onClick={() => setShowSideLighting(v => !v)}>
+          <div className="dock-icon" style={{ background: showSideLighting ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 26, height: 26, color: showSideLighting ? '#fff' : 'rgba(255,255,255,0.7)' }}>
+              <circle cx="12" cy="12" r="5" />
+              <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" />
+            </svg>
+          </div>
+          <div className={`dock-icon-indicator ${showSideLighting ? 'active-indicator' : ''}`} style={{ backgroundColor: showSideLighting ? 'rgba(255,255,255,0.9)' : 'rgba(255,255,255,0.2)' }} />
+          <span className="dock-label">Lighting</span>
+        </div>
+
+        {/* 6. Settings (gear) — all extra controls */}
         <div className="dock-item" onClick={() => setShowDesktopSettings(true)}>
           <div className="dock-icon dock-icon-settings">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">

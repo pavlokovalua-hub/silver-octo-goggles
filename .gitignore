@@ -4,3 +4,5 @@ dist
 /node_modules
 /dist
 ./dist
+cert.pem
+key.pem
