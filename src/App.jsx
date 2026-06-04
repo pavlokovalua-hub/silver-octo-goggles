@@ -420,8 +420,10 @@ function App() {
       setCameraSupported(false);
       return;
     }
-    const faceMesh = new FaceMesh({
-      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`,
+    const FaceMeshConstructor = FaceMesh.FaceMesh || FaceMesh;
+
+    const faceMesh = new FaceMeshConstructor({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
     });
     faceMesh.setOptions({
       maxNumFaces: 1,
