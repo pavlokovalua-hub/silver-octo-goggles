@@ -10,7 +10,7 @@ const FOREHEAD_EXTEND_EYEBROW_OFFSET = 0.01;
 // ─────── Temporal landmark smoothing (low-pass filter for jitter reduction) ───────
 // Експоненційне ковзне середнє (EWMA) для усунення тремтіння лендмарків між кадрами.
 // Lower alpha = smoother but more lag; higher alpha = more responsive but more jitter
-const LANDMARK_SMOOTHING_ALPHA = 0.6;
+const LANDMARK_SMOOTHING_ALPHA = 1;
 
 // ─────── Константи чутливості детектора якості відео ───────
 // LUMINANCE_THRESHOLD: якщо яскравість пікселя нижче — вважається темним
@@ -18,7 +18,7 @@ const LANDMARK_SMOOTHING_ALPHA = 0.6;
 // NOISE_GRADIENT_THRESHOLD: якщо середній градієнт між сусідніми пікселями вище — занадто зернисто (високе ISO)
 const LUMINANCE_THRESHOLD = 110;
 const DARK_RATIO_THRESHOLD = 0.25;
-const NOISE_GRADIENT_THRESHOLD = 6;
+const NOISE_GRADIENT_THRESHOLD = 9;
 
 // ─────── Модульні константи (лендмарки) ───────
 const FACE_OVAL = [
@@ -1585,7 +1585,7 @@ function App() {
           {skinSmooth && (
             <div className="slider-row">
               <span style={{fontSize:'12px', color:'rgba(255,255,255,0.5)', flexShrink:0}}>Strength</span>
-              <input type="range" min="0" max="1" step="0.01" value={skinSmoothStrength} onChange={(e) => setSkinSmoothStrength(parseFloat(e.target.value))} />
+              <input type="range" min="0" max="0.7" step="0.01" value={skinSmoothStrength} onChange={(e) => setSkinSmoothStrength(parseFloat(e.target.value))} />
               <span className="slider-value">{Math.round(skinSmoothStrength * 100)}%</span>
             </div>
           )}
@@ -1594,7 +1594,7 @@ function App() {
         <div className="desktop-settings-group">
           <label>Foundation Coverage: {Math.round(opacity * 100)}%</label>
           <div className="slider-row">
-            <input type="range" min="0" max="1" step="0.01" value={opacity} onChange={(e) => setOpacity(parseFloat(e.target.value))} />
+            <input type="range" min="0" max="0.5" step="0.01" value={opacity} onChange={(e) => setOpacity(parseFloat(e.target.value))} />
             <span className="slider-value">{Math.round(opacity * 100)}%</span>
           </div>
         </div>
@@ -1610,7 +1610,7 @@ function App() {
         <div className="desktop-settings-group">
           <label>Eye Brightness: {Math.round(eyeBrightness * 100)}%</label>
           <div className="slider-row">
-            <input type="range" min="0" max="1" step="0.01" value={eyeBrightness} onChange={(e) => setEyeBrightness(parseFloat(e.target.value))} />
+            <input type="range" min="0" max="0.1" step="0.01" value={eyeBrightness} onChange={(e) => setEyeBrightness(parseFloat(e.target.value))} />
             <span className="slider-value">{Math.round(eyeBrightness * 100)}%</span>
           </div>
         </div>
