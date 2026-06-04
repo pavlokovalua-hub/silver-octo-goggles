@@ -437,11 +437,22 @@ function App() {
     faceMesh.onResults(onResults);
 
     if (videoRef.current) {
-      const camera = new cam.Camera(videoRef.current, {
+
+
+    const MediaPipeCamera = window.Camera;
+
+    if (!MediaPipeCamera) {
+      console.error("MediaPipe Camera інструменти не завантажилися з CDN!");
+    }
+
+      const camera = new MediaPipeCamera(videoRef.current, {
         onFrame: async () => { await faceMesh.send({ image: videoRef.current }); },
         width: 640,
         height: 480,
       });
+
+
+
       camera.start().catch(() => setCameraSupported(false));
 
       videoRef.current.addEventListener('loadedmetadata', () => {
