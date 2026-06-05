@@ -40,6 +40,12 @@ const BLUSH_LEFT = [116, 117, 118, 119, 120, 121, 128, 50, 205, 49, 110, 203, 20
 const BLUSH_RIGHT = [345, 346, 347, 348, 349, 350, 357, 280, 425, 279, 339, 423, 424];
 const LEFT_IRIS = [468, 469, 470, 471, 472];
 const RIGHT_IRIS = [473, 474, 475, 476, 477];
+// ─────── Skin sampling landmarks for auto-foundation matching ───────
+// Лендмарки на чистій шкірі (щоки, лоб) для забору зразків кольору
+const SKIN_CHEEK_LEFT = [50, 205, 213, 216, 217, 49, 206, 207, 208, 209];
+const SKIN_CHEEK_RIGHT = [280, 425, 426, 436, 279, 422, 423, 424, 266];
+const SKIN_FOREHEAD = [109, 67, 108, 10, 337, 299, 338, 297];
+const SKIN_SAMPLE_GROUPS = [SKIN_CHEEK_LEFT, SKIN_CHEEK_RIGHT, SKIN_FOREHEAD];
 // Внутрішній контур рота (простір між губами — зуби, порожнина рота)
 const MOUTH_INTERIOR = [78, 191, 80, 81, 82, 13, 312, 311, 310, 415, 308, 324, 318, 402, 317, 14, 87, 178, 88, 95, 78];
 
@@ -196,7 +202,79 @@ function strokePath(ctx, landmarks, indices, fw, fh) {
   if (first) ctx.lineTo(first.x * fw, first.y * fh);
 }
 
+// ─────── Color distance function (weighted RGB with emphasis on warmth) ───────
+function colorDistance(c1, c2) {
+  // Зважена евклідова відстань: більша вага на червоний і зелений (важливо для тону шкіри)
+  const dr = c1.r - c2.r;
+  const dg = c1.g - c2.g;
+  const db = c1.b - c2.b;
+  // Червоний і зелений — ключові для тону шкіри, синій менш важливий
+  return dr * dr * 0.45 + dg * dg * 0.35 + db * db * 0.2;
+}
+
+// ─────── Auto-foundation match: sample skin from video, find closest tone ───────
+// Повертає { hex, sku, number } — найкращий збіг з foundationTones
+function findBestFoundationMatch(videoEl, landmarks, w, h) {
+  // Малюємо поточний кадр на тимчасовому канвасі
+  const tempCanvas = document.createElement('canvas');
+  tempCanvas.width = w;
+  tempCanvas.height = h;
+  const tempCtx = tempCanvas.getContext('2d');
+  tempCtx.drawImage(videoEl, 0, 0, w, h);
+  const imageData = tempCtx.getImageData(0, 0, w, h).data;
+
+  // Збираємо зразки з усіх груп (щоки + лоб)
+  const samples = [];
+  for (const group of SKIN_SAMPLE_GROUPS) {
+    for (const idx of group) {
+      const lm = landmarks[idx];
+      if (!lm) continue;
+      const px = Math.round(lm.x * w);
+      const py = Math.round(lm.y * h);
+      if (px < 0 || px >= w || py < 0 || py >= h) continue;
+      const pos = (py * w + px) * 4;
+      const r = imageData[pos];
+      const g = imageData[pos + 1];
+      const b = imageData[pos + 2];
+      // Фільтруємо надто темні/світлі пікселі (тіні/відблиски)
+      const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+      if (lum < 40 || lum > 240) continue;
+      samples.push({ r, g, b });
+    }
+  }
+
+  if (samples.length < 5) return null; // недостатньо зразків
+
+  // Усереднюємо всі зразки
+  let avgR = 0, avgG = 0, avgB = 0;
+  for (const s of samples) {
+    avgR += s.r;
+    avgG += s.g;
+    avgB += s.b;
+  }
+  avgR = Math.round(avgR / samples.length);
+  avgG = Math.round(avgG / samples.length);
+  avgB = Math.round(avgB / samples.length);
+  const skinAvg = { r: avgR, g: avgG, b: avgB };
+
+  // Знаходимо найближчий тон з foundationTones
+  let bestDist = Infinity;
+  let bestMatch = null;
+  for (const tone of foundationTones) {
+    const rgb = hexToRgb(tone.hex);
+    if (!rgb) continue;
+    const dist = colorDistance(skinAvg, rgb);
+    if (dist < bestDist) {
+      bestDist = dist;
+      bestMatch = tone;
+    }
+  }
+
+  return bestMatch;
+}
+
 function computeFaceBounds(landmarks) {
+
   let minX = 1, maxX = 0;
   let ovalMinY = 1, ovalMaxY = 0;
   let eyebrowTopY = 1;
@@ -340,6 +418,53 @@ function App() {
   const [skinSmoothStrength, setSkinSmoothStrength] = useState(latestMakeupState.current.skinSmoothStrength);
   const [eyeBrightness, setEyeBrightness] = useState(latestMakeupState.current.eyeBrightness);
   const [showSideLighting, setShowSideLighting] = useState(false);
+  const [autoMatching, setAutoMatching] = useState(false);
+  const [showAutoMatch, setShowAutoMatch] = useState(false);
+  const [autoMatchResult, setAutoMatchResult] = useState(null);
+  const autoMatchTimerRef = useRef(null);
+
+  // ───── Auto-foundation match handler ─────
+  const handleAutoMatch = () => {
+    const lm = latestLandmarksRef.current;
+    const video = videoRef.current;
+    if (!lm || !video || !canvasRef.current) return;
+
+    setAutoMatching(true);
+    setShowAutoMatch(false);
+
+    // Невелика затримка, щоб кадр встиг оновитись
+    setTimeout(() => {
+      try {
+        const width = canvasRef.current.width;
+        const height = canvasRef.current.height;
+        const match = findBestFoundationMatch(video, lm, width, height);
+        if (match) {
+          setFoundationColor(match.hex);
+          setShowFoundation(true);
+          setAutoMatchResult({ sku: match.sku, hex: match.hex, number: match.number });
+          setShowAutoMatch(true);
+
+          // Автоматично приховуємо сповіщення через 5 секунд
+          if (autoMatchTimerRef.current) clearTimeout(autoMatchTimerRef.current);
+          autoMatchTimerRef.current = setTimeout(() => {
+            setShowAutoMatch(false);
+          }, 5000);
+        } else {
+          setAutoMatchResult(null);
+          setShowAutoMatch(true);
+          if (autoMatchTimerRef.current) clearTimeout(autoMatchTimerRef.current);
+          autoMatchTimerRef.current = setTimeout(() => {
+            setShowAutoMatch(false);
+          }, 3000);
+        }
+      } catch (e) {
+        console.error('Auto match error:', e);
+      } finally {
+        setAutoMatching(false);
+      }
+    }, 300);
+  };
+
   const [cameraSupported, setCameraSupported] = useState(true);
   const [lowLightWarning, setLowLightWarning] = useState(false);
   const lowLightWarningRef = useRef(false); // синхронізується з lowLightWarning для використання в onResults (closure)
@@ -1603,10 +1728,36 @@ function App() {
         /* ═══ МОБІЛЬНИЙ LAYOUT ═══ */
         <div className="mobile-layout">
           <div className="video-area" />
+
+          {/* ✨ Auto Match Foundation (mobile circular button) */}
+          <button
+            className="mobile-auto-match-btn"
+            onClick={handleAutoMatch}
+            disabled={autoMatching}
+            aria-label="Auto match foundation"
+          >
+            {autoMatching ? (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 22, height: 22, color: '#c084fc' }}>
+                <circle cx="12" cy="12" r="10" strokeDasharray="31.4 31.4" strokeDashoffset="10">
+                  <animateTransform attributeName="transform" type="rotate" from="0 12 12" to="360 12 12" dur="1s" repeatCount="indefinite" />
+                </circle>
+              </svg>
+            ) : (
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 22, height: 22, color: 'rgba(255,255,255,0.85)' }}>
+                <path d="M14 4L12 2M18 8L20 6M16 12L18 14M6 18L4 20M9 5L5 9M5 5L9 9" />
+                <path d="M13 3L21 11" />
+                <circle cx="6" cy="18" r="1.5" fill="currentColor" />
+                <circle cx="18" cy="6" r="1.5" fill="currentColor" />
+                <circle cx="12" cy="12" r="1" fill="currentColor" />
+              </svg>
+            )}
+          </button>
+
           {lowLightWarning && (
             <div className="shadow-warning shadow-warning-overlay"><span>⚠</span> Poor lighting — add more light for accurate shade matching</div>
           )}
           <div className="controls-panel">
+
             <div className="color-buttons">
               <div className="color-btn-wrapper">
                 <button className={`color-btn color-btn-foundation ${activeColorPicker === 'foundation' || showFoundationTones ? 'active' : ''}`} style={{ border: `5px solid ${foundationColor}` }} onClick={() => setShowFoundationTones(true)} />
@@ -1680,8 +1831,25 @@ function App() {
             {/* Separator */}
             <div className="dock-separator" />
 
-            {/* 5. Side Lighting */}
+            {/* 5. ✨ Auto Match Foundation */}
+            <div className="dock-item" onClick={handleAutoMatch}>
+              <div className="dock-icon" style={{ background: autoMatching ? 'rgba(168,85,247,0.3)' : 'rgba(168,85,247,0.12)', border: autoMatching ? '2px solid rgba(168,85,247,0.6)' : '1px solid rgba(168,85,247,0.25)' }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 26, height: 26, color: autoMatching ? '#c084fc' : 'rgba(255,255,255,0.7)' }}>
+                  <path d="M14 4L12 2M18 8L20 6M16 12L18 14M6 18L4 20M9 5L5 9M5 5L9 9" />
+                  <path d="M13 3L21 11" />
+                  <circle cx="6" cy="18" r="1.5" fill="currentColor" />
+                  <circle cx="18" cy="6" r="1.5" fill="currentColor" />
+                  <circle cx="12" cy="12" r="1" fill="currentColor" />
+                </svg>
+
+              </div>
+              <div className={`dock-icon-indicator ${showFoundation ? 'active-indicator' : ''}`} style={{ backgroundColor: showFoundation ? foundationColor : 'rgba(255,255,255,0.2)' }} />
+              <span className="dock-label">Auto Match</span>
+            </div>
+
+            {/* 6. Side Lighting */}
             <div className="dock-item" onClick={() => setShowSideLighting(v => !v)}>
+
               <div className="dock-icon" style={{ background: showSideLighting ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.2)' }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 26, height: 26, color: showSideLighting ? '#fff' : 'rgba(255,255,255,0.7)' }}>
                   <circle cx="12" cy="12" r="5" />
@@ -1692,7 +1860,8 @@ function App() {
               <span className="dock-label">Lighting</span>
             </div>
 
-            {/* 6. Settings (gear) — all extra controls */}
+            {/* 7. Settings (gear) — all extra controls */}
+
             <div className="dock-item" onClick={() => setShowDesktopSettings(true)}>
               <div className="dock-icon dock-icon-settings">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1716,9 +1885,30 @@ function App() {
 
           {/* Desktop settings panel */}
           {desktopSettingsPanel}
+
+          {/* ✨ Auto-match notification */}
+          {showAutoMatch && (
+            <div className="auto-match-notification" onClick={() => setShowAutoMatch(false)}>
+              <div className="auto-match-content">
+                <div className="auto-match-icon">✨</div>
+                {autoMatchResult ? (
+                  <>
+                    <div className="auto-match-title">Foundation Auto-Matched!</div>
+                    <div className="auto-match-detail">
+                      <span className="auto-match-swatch" style={{ backgroundColor: autoMatchResult.hex }} />
+                      <span>Tone #{autoMatchResult.number}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="auto-match-title">Could not match — not enough skin samples</div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </>
+
   );
 }
 

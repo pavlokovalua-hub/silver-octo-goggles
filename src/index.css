@@ -60,7 +60,39 @@ video, canvas {
 }
 
 /* ===== MOBILE LAYOUT ===== */
+/* ===== MOBILE AUTO-MATCH BUTTON (circular, top-right) ===== */
+.mobile-auto-match-btn {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 15;
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(168, 85, 247, 0.4);
+  background: rgba(30, 30, 45, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4), 0 0 15px rgba(168, 85, 247, 0.1);
+  transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobile-auto-match-btn:active {
+  transform: scale(0.9);
+}
+
+.mobile-auto-match-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 @media (max-width: 1023px) {
+
   html, body {
     height: 100%;
     width: 100%;
@@ -1240,3 +1272,68 @@ input[type="range"]::-moz-range-thumb {
   cursor: pointer;
   border: none;
 }
+
+/* ===== AUTO-MATCH NOTIFICATION ===== */
+.auto-match-notification {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  animation: autoMatchSlideDown 0.35s ease;
+  cursor: pointer;
+}
+
+@keyframes autoMatchSlideDown {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.auto-match-content {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 24px;
+  background: rgba(30, 30, 45, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 16px;
+  border: 1px solid rgba(168, 85, 247, 0.4);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5), 0 0 20px rgba(168, 85, 247, 0.15);
+}
+
+.auto-match-icon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.auto-match-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e2e8f0;
+  white-space: nowrap;
+}
+
+.auto-match-detail {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #c084fc;
+}
+
+.auto-match-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  flex-shrink: 0;
+}
+
