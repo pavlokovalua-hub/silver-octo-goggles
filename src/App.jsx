@@ -17,8 +17,8 @@ const LANDMARK_SMOOTHING_ALPHA = 1;
 // DARK_RATIO_THRESHOLD: якщо відсоток темних пікселів на обличчі вище — недостатньо світла
 // NOISE_GRADIENT_THRESHOLD: якщо середній градієнт між сусідніми пікселями вище — занадто зернисто (високе ISO)
 const LUMINANCE_THRESHOLD = 110;
-const DARK_RATIO_THRESHOLD = 0.25;
-const NOISE_GRADIENT_THRESHOLD = 9;
+const DARK_RATIO_THRESHOLD = 0.45;
+const NOISE_GRADIENT_THRESHOLD = 12;
 
 // ─────── Модульні константи (лендмарки) ───────
 const FACE_OVAL = [
