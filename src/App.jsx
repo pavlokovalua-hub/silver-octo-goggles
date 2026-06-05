@@ -17,8 +17,8 @@ const LANDMARK_SMOOTHING_ALPHA = 1;
 // DARK_RATIO_THRESHOLD: якщо відсоток темних пікселів на обличчі вище — недостатньо світла
 // NOISE_GRADIENT_THRESHOLD: якщо середній градієнт між сусідніми пікселями вище — занадто зернисто (високе ISO)
 const LUMINANCE_THRESHOLD = 110;
-const DARK_RATIO_THRESHOLD = 0.45;
-const NOISE_GRADIENT_THRESHOLD = 12;
+const DARK_RATIO_THRESHOLD = 0.35;
+const NOISE_GRADIENT_THRESHOLD = 11;
 
 // ─────── Модульні константи (лендмарки) ───────
 const FACE_OVAL = [
@@ -258,21 +258,10 @@ function findBestFoundationMatch(videoEl, landmarks, w, h) {
 
   if (groupResults.length === 0) return null;
 
-  // Знаходимо найяскравішу групу (найкраще освітлена ділянка = найточніший колір шкіри)
-  let maxLum = 0;
-  for (const gr of groupResults) {
-    if (gr.avgLum > maxLum) maxLum = gr.avgLum;
-  }
-
-  // Відбираємо ТІЛЬКИ групи, чия середня яскравість не нижче 85% від найяскравішої
-  // Це виключає затінені ділянки (наприклад, щока в тіні), які спотворюють колір
-  const LUM_TOLERANCE = 0.85;
-  const selectedGroups = groupResults.filter(gr => gr.avgLum >= maxLum * LUM_TOLERANCE);
-
-  if (selectedGroups.length === 0) return null;
-
-  // Збираємо всі зразки лише з відібраних (добре освітлених) груп
-  const selectedSamples = selectedGroups.flatMap(gr => gr.samples);
+  // Усереднюємо ВСІ групи, а не тільки найяскравіші.
+  // Це дає більш природний, усереднений тон шкіри замість
+  // цілеспрямованого висвітлення по максимуму.
+  const selectedSamples = groupResults.flatMap(gr => gr.samples);
 
   if (selectedSamples.length < 3) return null;
 
