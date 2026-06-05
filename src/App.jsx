@@ -452,11 +452,33 @@ function App() {
   const [showSideLighting, setShowSideLighting] = useState(false);
   const [autoMatching, setAutoMatching] = useState(false);
   const [showAutoMatch, setShowAutoMatch] = useState(false);
+  const [showAutoMatchPopup, setShowAutoMatchPopup] = useState(false);
   const [autoMatchResult, setAutoMatchResult] = useState(null);
   const autoMatchTimerRef = useRef(null);
 
+  // ───── Auto-foundation match popup handler ─────
+  // Спочатку показуємо попап з інструкцією
+  const handleAutoMatchClick = () => {
+    if (lowLightWarningRef.current) return;
+    setShowAutoMatchPopup(true);
+  };
+
+  // Якщо користувач підтвердив — запускаємо автопідбір
+  const confirmAutoMatch = () => {
+    setShowAutoMatchPopup(false);
+    // Даємо React час закрити попап перед запуском
+    setTimeout(() => {
+      handleAutoMatchInternal();
+    }, 50);
+  };
+
+  // Якщо користувач скасував — просто закриваємо попап
+  const cancelAutoMatch = () => {
+    setShowAutoMatchPopup(false);
+  };
+
   // ───── Auto-foundation match handler ─────
-  const handleAutoMatch = () => {
+  const handleAutoMatchInternal = () => {
     const lm = latestLandmarksRef.current;
     const video = videoRef.current;
     if (!lm || !video || !canvasRef.current) return;
@@ -1765,7 +1787,7 @@ function App() {
           {/* ✨ Auto Match Foundation (mobile circular button) */}
           <button
             className={`mobile-auto-match-btn${lowLightWarning ? ' disabled' : ''}`}
-            onClick={handleAutoMatch}
+            onClick={handleAutoMatchClick}
             disabled={autoMatching || lowLightWarning}
             aria-label="Auto match foundation"
           >
@@ -1886,7 +1908,7 @@ function App() {
             <div className="dock-separator" />
 
             {/* 5. ✨ Auto Match Foundation */}
-            <div className={`dock-item${lowLightWarning ? ' dock-item-disabled' : ''}`} onClick={lowLightWarning ? undefined : handleAutoMatch} style={{ cursor: lowLightWarning ? 'not-allowed' : 'pointer' }}>
+            <div className={`dock-item${lowLightWarning ? ' dock-item-disabled' : ''}`} onClick={lowLightWarning ? undefined : handleAutoMatchClick} style={{ cursor: lowLightWarning ? 'not-allowed' : 'pointer' }}>
               <div className="dock-icon" style={{ background: autoMatching ? 'rgba(168,85,247,0.3)' : lowLightWarning ? 'rgba(168,85,247,0.06)' : 'rgba(168,85,247,0.12)', border: autoMatching ? '2px solid rgba(168,85,247,0.6)' : lowLightWarning ? '1px solid rgba(168,85,247,0.1)' : '1px solid rgba(168,85,247,0.25)' }}>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 26, height: 26, color: autoMatching ? '#c084fc' : lowLightWarning ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.7)' }}>
                   <path d="M14 4L12 2M18 8L20 6M16 12L18 14M6 18L4 20M9 5L5 9M5 5L9 9" />
@@ -1959,6 +1981,34 @@ function App() {
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* ═══ Auto-match instruction popup ═══ */}
+      {showAutoMatchPopup && (
+        <div className="auto-match-popup-overlay" onClick={cancelAutoMatch}>
+          <div className="auto-match-popup-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="auto-match-popup-header">
+              <h3>💡 Before Auto-Match</h3>
+              <button className="auto-match-popup-close" onClick={cancelAutoMatch}>✕</button>
+            </div>
+            <div className="auto-match-popup-body">
+              <p>For the best foundation shade match, please follow these tips:</p>
+              <ul>
+                <li>Make sure you are in a <strong>well-lit room</strong> with natural or bright light.</li>
+                <li>Avoid <strong>harsh shadows</strong> on your face — neither side should be in shadow.</li>
+                <li>Keep your <strong>head facing straight</strong> toward the camera.</li>
+                <li>Ensure both the <strong>left and right sides of your face</strong> are evenly lit.</li>
+              </ul>
+              <div className="auto-match-popup-disclaimer">
+                <strong>Please note:</strong> Due to differences in camera sensors, lighting conditions, and individual skin tones, the matched shade is a <strong>recommendation only</strong>. We encourage you to review the result and decide whether you like the suggested tone before confirming it.
+              </div>
+            </div>
+            <div className="auto-match-popup-actions">
+              <button className="auto-match-popup-cancel" onClick={cancelAutoMatch}>Cancel</button>
+              <button className="auto-match-popup-confirm" onClick={confirmAutoMatch}>Let's Match ✨</button>
+            </div>
+          </div>
         </div>
       )}
     </>

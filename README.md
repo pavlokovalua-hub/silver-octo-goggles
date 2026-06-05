@@ -114,3 +114,348 @@ The app starts at `https://localhost:5173/silver-octo-goggles/` (HTTPS is requir
 - **Canvas 2D** – Real‑time makeup rendering with composite operations (multiply, screen, overlay, destination‑out)
 - **WASM‑based skin smoothing** – Custom C++ module compiled to WebAssembly
 - **Vite** – Dev server & bundler
+
+---
+
+## Integration into a Third‑Party Website
+
+This project can be embedded into any existing website, similar to Angular Elements (custom elements / web components). Below are several integration strategies — from simplest (iframe) to most tightly integrated (custom element).
+
+> ⚠️ **Important:** The app requires **HTTPS** to access the camera via `getUserMedia`. The host page **must** be served over HTTPS (or `localhost`).
+
+---
+
+### 1. `<iframe>` Embedding (Simplest)
+
+The quickest way is to embed the standalone app via an `<iframe>`. You can control the initial state via URL parameters (see [URL Parameters](#url-parameters) section).
+
+```html
+<iframe
+  src="https://pavlokovalua-hub.github.io/silver-octo-goggles/?foundation-product-sku=212-66160"
+  width="100%"
+  height="700"
+  style="border: none; border-radius: 12px;"
+  allow="camera; microphone"
+  loading="lazy"
+></iframe>
+```
+
+**Pros:**
+- Trivial to set up — no build steps
+- Fully isolated (CSS, JS don't leak)
+- Works with any CMS or static site
+
+**Cons:**
+- Limited communication with the host page (postMessage API can be used — see below)
+- The iframe has its own full UI (not just the makeup view)
+
+#### Communication via `postMessage`
+
+You can send configuration to the iframe and receive events from it:
+
+```javascript
+const iframe = document.querySelector('iframe');
+
+// Send configuration to the iframe
+iframe.contentWindow.postMessage({
+  type: 'configure',
+  payload: {
+    foundationColor: '#f3cfb3',
+    lipColor: '#BD2846',
+    showFoundation: true,
+    showLip: true,
+    showBlush: false,
+  }
+}, '*');
+
+// Listen for events from the iframe
+window.addEventListener('message', (event) => {
+  if (event.data?.type === 'tryon:stateChange') {
+    console.log('Makeup state changed:', event.data.payload);
+  }
+  if (event.data?.type === 'tryon:screenshot') {
+    console.log('Screenshot taken:', event.data.payload.dataUrl);
+  }
+});
+```
+
+---
+
+### 2. Web Component (Custom Element) — Recommended for Tight Integration
+
+Package the app as a standard HTML custom element (`<virtual-try-on>`) that can be dropped into any HTML page. This approach uses Vite's **library mode** combined with a lightweight web component wrapper.
+
+#### Step 1: Install dependencies
+
+```bash
+cd foundation-try-on
+npm install
+```
+
+#### Step 2: Create a web component wrapper — `src/virtual-try-on-element.jsx`
+
+Create a file that exports a custom element wrapping the React app:
+
+```jsx
+// src/virtual-try-on-element.jsx
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+import './index.css';
+
+class VirtualTryOnElement extends HTMLElement {
+  constructor() {
+    super();
+    this._root = null;
+  }
+
+  connectedCallback() {
+    // Read attributes for initial config
+    const foundationSku = this.getAttribute('foundation-product-sku');
+    const blushSku = this.getAttribute('blush-product-sku');
+    const lipstickSku = this.getAttribute('lipstick-product-sku');
+    const liplinerSku = this.getAttribute('lipliner-product-sku');
+
+    // Set URL params so the App can pick them up
+    if (foundationSku || blushSku || lipstickSku || liplinerSku) {
+      const url = new URL(window.location);
+      if (foundationSku) url.searchParams.set('foundation-product-sku', foundationSku);
+      if (blushSku) url.searchParams.set('blush-product-sku', blushSku);
+      if (lipstickSku) url.searchParams.set('lipstick-product-sku', lipstickSku);
+      if (liplinerSku) url.searchParams.set('lipliner-product-sku', liplinerSku);
+      window.history.replaceState({}, '', url);
+    }
+
+    // Mount React app
+    this._root = ReactDOM.createRoot(this);
+    this._root.render(
+      <React.StrictMode>
+        <App />
+      </React.StrictMode>
+    );
+  }
+
+  disconnectedCallback() {
+    if (this._root) {
+      this._root.unmount();
+      this._root = null;
+    }
+  }
+}
+
+// Define the custom element (only once)
+if (!customElements.get('virtual-try-on')) {
+  customElements.define('virtual-try-on', VirtualTryOnElement);
+}
+
+export default VirtualTryOnElement;
+```
+
+#### Step 3: Update `vite.config.js` for library mode
+
+The build should produce a single JavaScript file that registers the custom element globally.
+
+```js
+// vite.config.js
+import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  build: {
+    lib: {
+      entry: 'src/virtual-try-on-element.jsx',
+      name: 'VirtualTryOn',
+      formats: ['iife'],
+      fileName: () => 'virtual-try-on.js',
+    },
+    rollupOptions: {
+      // Externalize React — the host page must provide it (optional)
+      external: [],
+      output: {
+        // Inline all styles
+        inlineDynamicImports: true,
+      },
+    },
+  },
+});
+```
+
+#### Step 4: Build the web component
+
+```bash
+npx vite build
+```
+
+The output will be in `dist/virtual-try-on.js` — a single self-contained script.
+
+#### Step 5: Use the custom element on any page
+
+```html
+<!DOCTYPE html>
+<html>
+<head>
+  <!-- Load the web component script -->
+  <script src="/path/to/virtual-try-on.js"></script>
+</head>
+<body>
+  <!-- Use it as a standard HTML element -->
+  <virtual-try-on
+    foundation-product-sku="212-66160"
+    blush-product-sku="212-15505"
+    lipstick-product-sku="212-12703"
+    lipliner-product-sku="212-519050"
+    style="width: 100%; height: 700px; display: block;"
+  ></virtual-try-on>
+</body>
+</html>
+```
+
+**Pros:**
+- Fully encapsulated — no CSS or JS conflicts
+- Works with any framework (React, Vue, Angular, vanilla HTML)
+- Fine-grained control via HTML attributes
+
+**Cons:**
+- Requires a build step (but already part of your workflow)
+- The script is self-contained (React is bundled inside) → larger file (~200–300 KB gzipped)
+
+#### Optional: Externalize React for a smaller bundle
+
+If the host page already uses React, you can exclude it from the bundle:
+
+```js
+// vite.config.js — externalize React
+build: {
+  lib: {
+    entry: 'src/virtual-try-on-element.jsx',
+    name: 'VirtualTryOn',
+    formats: ['iife'],
+    fileName: () => 'virtual-try-on.js',
+  },
+  rollupOptions: {
+    external: ['react', 'react-dom'],
+    output: {
+      globals: {
+        react: 'React',
+        'react-dom': 'ReactDOM',
+      },
+    },
+  },
+},
+```
+
+Then the host page must include React before the widget:
+
+```html
+<script crossorigin src="https://unpkg.com/react@19/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@19/umd/react-dom.production.min.js"></script>
+<script src="/path/to/virtual-try-on.js"></script>
+```
+
+---
+
+### 3. Direct Script Embedding (Global Function)
+
+For even simpler adoption without custom element registration, expose a global function that mounts the app into a given container.
+
+#### Create `src/embed.jsx`
+
+```jsx
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App';
+import './index.css';
+
+window.VirtualTryOn = {
+  mount(container, options = {}) {
+    // Set URL params from options
+    const url = new URL(window.location);
+    if (options.foundationProductSku) url.searchParams.set('foundation-product-sku', options.foundationProductSku);
+    if (options.blushProductSku) url.searchParams.set('blush-product-sku', options.blushProductSku);
+    if (options.lipstickProductSku) url.searchParams.set('lipstick-product-sku', options.lipstickProductSku);
+    if (options.liplinerProductSku) url.searchParams.set('lipliner-product-sku', options.liplinerProductSku);
+    window.history.replaceState({}, '', url);
+
+    const root = ReactDOM.createRoot(container);
+    root.render(
+      <React.StrictMode>
+        <App />
+      </React.StrictMode>
+    );
+    return root;
+  },
+};
+```
+
+Build with Vite library mode pointing to `src/embed.jsx`, then use:
+
+```html
+<div id="tryon-container"></div>
+<script src="/path/to/virtual-try-on.umd.js"></script>
+<script>
+  VirtualTryOn.mount(document.getElementById('tryon-container'), {
+    foundationProductSku: '212-66160',
+    blushProductSku: '212-15505',
+  });
+</script>
+```
+
+---
+
+### 4. Extending `postMessage` API (for iframe embed)
+
+To make the iframe approach more interactive, extend the `App.jsx` to listen for and respond to `postMessage` events. Add this at the end of the `useEffect` in `App.jsx`:
+
+```javascript
+// Listen for configuration messages from the parent page
+const handleMessage = (event) => {
+  if (event.data?.type === 'configure') {
+    const { foundationColor, lipColor, showFoundation, showLip } = event.data.payload;
+    if (foundationColor) setFoundationColor(foundationColor);
+    if (lipColor) setLipColor(lipColor);
+    if (showFoundation !== undefined) setShowFoundation(showFoundation);
+    if (showLip !== undefined) setShowLip(showLip);
+  }
+};
+window.addEventListener('message', handleMessage);
+
+return () => {
+  window.removeEventListener('message', handleMessage);
+};
+```
+
+And to notify the parent of state changes, add this effect:
+
+```javascript
+useEffect(() => {
+  if (window.parent !== window) {
+    window.parent.postMessage({
+      type: 'tryon:stateChange',
+      payload: {
+        foundationColor,
+        lipColor,
+        blushColor,
+        showFoundation,
+        showLip,
+        showBlush,
+        showLipLiner,
+      }
+    }, '*');
+  }
+}, [foundationColor, lipColor, blushColor, showFoundation, showLip, showBlush, showLipLiner]);
+```
+
+---
+
+### Summary: Which Approach to Choose
+
+| Approach | Complexity | Bundle Size | Integration | Best For |
+|----------|-----------|------------|-------------|----------|
+| **iframe** | None | N/A (hosted separately) | Loose isolation | Quick embed, CMS/Shopify |
+| **Web Component** | Medium | ~200-300 KB gzipped | Tight, encapsulated | SPA sites, product pages |
+| **Script embed** | Low-Medium | ~200-300 KB gzipped | Simple global function | Vanilla HTML sites |
+| **Externalized WC** | Medium | ~30 KB (React external) | Tight, smaller bundle | Host already uses React |
+
+> 💡 **Recommendation:** Start with the **iframe** approach for speed, then migrate to a **Web Component** if you need tighter integration.
+
