@@ -91,9 +91,16 @@ video, canvas {
   cursor: not-allowed;
 }
 
+.mobile-auto-match-btn.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(0.5);
+}
+
 @media (max-width: 1023px) {
 
   html, body {
+
     height: 100%;
     width: 100%;
     overscroll-behavior-x: contain;
@@ -533,6 +540,12 @@ video, canvas {
 
   .dock-item:active {
     transform: translateY(-2px) scale(0.95);
+  }
+
+  .dock-item.dock-item-disabled {
+    pointer-events: none;
+    opacity: 0.5;
+    filter: grayscale(0.6);
   }
 
   .dock-icon {
@@ -1336,4 +1349,12 @@ input[type="range"]::-moz-range-thumb {
   border: 2px solid rgba(255, 255, 255, 0.2);
   flex-shrink: 0;
 }
+
+/* On mobile, push auto-match notification below the auto-match button (after base rule for cascade) */
+@media (max-width: 1023px) {
+  .auto-match-notification {
+    top: 80px !important;
+  }
+}
+
 

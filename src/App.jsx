@@ -460,6 +460,7 @@ function App() {
     const lm = latestLandmarksRef.current;
     const video = videoRef.current;
     if (!lm || !video || !canvasRef.current) return;
+    if (lowLightWarningRef.current) return;
 
     setAutoMatching(true);
     setShowAutoMatch(false);
@@ -1763,9 +1764,9 @@ function App() {
 
           {/* ✨ Auto Match Foundation (mobile circular button) */}
           <button
-            className="mobile-auto-match-btn"
+            className={`mobile-auto-match-btn${lowLightWarning ? ' disabled' : ''}`}
             onClick={handleAutoMatch}
-            disabled={autoMatching}
+            disabled={autoMatching || lowLightWarning}
             aria-label="Auto match foundation"
           >
             {autoMatching ? (
@@ -1814,7 +1815,28 @@ function App() {
           {showBlushTones && blushTonesPanel}
           {showLipstickTones && lipstickTonesPanel}
           {showLiplinerTones && liplinerTonesPanel}
+
+          {/* ✨ Auto-match notification (mobile) */}
+          {showAutoMatch && (
+            <div className="auto-match-notification" onClick={() => setShowAutoMatch(false)}>
+              <div className="auto-match-content">
+                <div className="auto-match-icon">✨</div>
+                {autoMatchResult ? (
+                  <>
+                    <div className="auto-match-title">Foundation Auto-Matched!</div>
+                    <div className="auto-match-detail">
+                      <span className="auto-match-swatch" style={{ backgroundColor: autoMatchResult.hex }} />
+                      <span>Tone #{autoMatchResult.number}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="auto-match-title">Could not match — not enough skin samples</div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
+
       ) : (
         /* ═══ ДЕСКТОПНИЙ LAYOUT ═══ */
         <div className="desktop-layout">
@@ -1864,9 +1886,9 @@ function App() {
             <div className="dock-separator" />
 
             {/* 5. ✨ Auto Match Foundation */}
-            <div className="dock-item" onClick={handleAutoMatch}>
-              <div className="dock-icon" style={{ background: autoMatching ? 'rgba(168,85,247,0.3)' : 'rgba(168,85,247,0.12)', border: autoMatching ? '2px solid rgba(168,85,247,0.6)' : '1px solid rgba(168,85,247,0.25)' }}>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 26, height: 26, color: autoMatching ? '#c084fc' : 'rgba(255,255,255,0.7)' }}>
+            <div className={`dock-item${lowLightWarning ? ' dock-item-disabled' : ''}`} onClick={lowLightWarning ? undefined : handleAutoMatch} style={{ cursor: lowLightWarning ? 'not-allowed' : 'pointer' }}>
+              <div className="dock-icon" style={{ background: autoMatching ? 'rgba(168,85,247,0.3)' : lowLightWarning ? 'rgba(168,85,247,0.06)' : 'rgba(168,85,247,0.12)', border: autoMatching ? '2px solid rgba(168,85,247,0.6)' : lowLightWarning ? '1px solid rgba(168,85,247,0.1)' : '1px solid rgba(168,85,247,0.25)' }}>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ width: 26, height: 26, color: autoMatching ? '#c084fc' : lowLightWarning ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.7)' }}>
                   <path d="M14 4L12 2M18 8L20 6M16 12L18 14M6 18L4 20M9 5L5 9M5 5L9 9" />
                   <path d="M13 3L21 11" />
                   <circle cx="6" cy="18" r="1.5" fill="currentColor" />
