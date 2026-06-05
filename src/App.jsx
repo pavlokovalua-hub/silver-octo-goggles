@@ -223,9 +223,11 @@ function findBestFoundationMatch(videoEl, landmarks, w, h) {
   tempCtx.drawImage(videoEl, 0, 0, w, h);
   const imageData = tempCtx.getImageData(0, 0, w, h).data;
 
-  // Збираємо зразки з усіх груп (щоки + лоб)
-  const samples = [];
+  // Збираємо зразки з КОЖНОЇ групи окремо, щоб виявити затінені ділянки
+  // Кожна група: { samples: [{r,g,b}], avgLum: number }
+  const groupResults = [];
   for (const group of SKIN_SAMPLE_GROUPS) {
+    const groupSamples = [];
     for (const idx of group) {
       const lm = landmarks[idx];
       if (!lm) continue;
@@ -239,22 +241,51 @@ function findBestFoundationMatch(videoEl, landmarks, w, h) {
       // Фільтруємо надто темні/світлі пікселі (тіні/відблиски)
       const lum = 0.299 * r + 0.587 * g + 0.114 * b;
       if (lum < 40 || lum > 240) continue;
-      samples.push({ r, g, b });
+      groupSamples.push({ r, g, b });
     }
+    if (groupSamples.length < 2) continue; // недостатньо зразків у групі
+
+    // Середня яскравість групи
+    let sumLum = 0;
+    for (const s of groupSamples) {
+      sumLum += 0.299 * s.r + 0.587 * s.g + 0.114 * s.b;
+    }
+    groupResults.push({
+      samples: groupSamples,
+      avgLum: sumLum / groupSamples.length,
+    });
   }
 
-  if (samples.length < 5) return null; // недостатньо зразків
+  if (groupResults.length === 0) return null;
 
-  // Усереднюємо всі зразки
+  // Знаходимо найяскравішу групу (найкраще освітлена ділянка = найточніший колір шкіри)
+  let maxLum = 0;
+  for (const gr of groupResults) {
+    if (gr.avgLum > maxLum) maxLum = gr.avgLum;
+  }
+
+  // Відбираємо ТІЛЬКИ групи, чия середня яскравість не нижче 85% від найяскравішої
+  // Це виключає затінені ділянки (наприклад, щока в тіні), які спотворюють колір
+  const LUM_TOLERANCE = 0.85;
+  const selectedGroups = groupResults.filter(gr => gr.avgLum >= maxLum * LUM_TOLERANCE);
+
+  if (selectedGroups.length === 0) return null;
+
+  // Збираємо всі зразки лише з відібраних (добре освітлених) груп
+  const selectedSamples = selectedGroups.flatMap(gr => gr.samples);
+
+  if (selectedSamples.length < 3) return null;
+
+  // Усереднюємо зразки
   let avgR = 0, avgG = 0, avgB = 0;
-  for (const s of samples) {
+  for (const s of selectedSamples) {
     avgR += s.r;
     avgG += s.g;
     avgB += s.b;
   }
-  avgR = Math.round(avgR / samples.length);
-  avgG = Math.round(avgG / samples.length);
-  avgB = Math.round(avgB / samples.length);
+  avgR = Math.round(avgR / selectedSamples.length);
+  avgG = Math.round(avgG / selectedSamples.length);
+  avgB = Math.round(avgB / selectedSamples.length);
   const skinAvg = { r: avgR, g: avgG, b: avgB };
 
   // Знаходимо найближчий тон з foundationTones
@@ -272,6 +303,7 @@ function findBestFoundationMatch(videoEl, landmarks, w, h) {
 
   return bestMatch;
 }
+
 
 function computeFaceBounds(landmarks) {
 
