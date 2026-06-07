@@ -132,27 +132,6 @@ class VirtualTryOnElement extends HTMLElement {
       this._resizeObserver.observe(this);
     }
 
-    // Set URL params from HTML attributes
-    const url = new URL(window.location);
-    let urlChanged = false;
-
-    const setParam = (attr, paramName) => {
-      const val = this.getAttribute(attr);
-      if (val && url.searchParams.get(paramName) !== val) {
-        url.searchParams.set(paramName, val);
-        urlChanged = true;
-      }
-    };
-
-    // setParam('foundation-product-sku', 'foundation-product-sku');
-    // setParam('blush-product-sku', 'blush-product-sku');
-    // setParam('lipstick-product-sku', 'lipstick-product-sku');
-    // setParam('lipliner-product-sku', 'lipliner-product-sku');
-
-    if (urlChanged) {
-      window.history.replaceState({}, '', url);
-    }
-
     try {
       // 1. Inject CSS (style.css lives next to virtual-try-on.js)
       const scriptDir = getScriptDir();
@@ -167,10 +146,17 @@ class VirtualTryOnElement extends HTMLElement {
         return;
       }
 
-      // 4. Mount React app (only once)
+      // 4. Mount React app (only once), passing product SKUs as props (not via URL)
       if (!this._root) {
         this._root = ReactDOM.createRoot(this);
-        this._root.render(<App />);
+        this._root.render(
+          <App
+            foundationProductSku={this.getAttribute('foundation-product-sku') || undefined}
+            blushProductSku={this.getAttribute('blush-product-sku') || undefined}
+            lipstickProductSku={this.getAttribute('lipstick-product-sku') || undefined}
+            liplinerProductSku={this.getAttribute('lipliner-product-sku') || undefined}
+          />
+        );
       }
     } catch (err) {
       console.error('VirtualTryOnElement: failed to initialize', err);

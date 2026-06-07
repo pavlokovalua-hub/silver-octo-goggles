@@ -125,27 +125,6 @@ const liplinerTones = liplinerData.map(item => {
   return { sku: item.sku, hex, name: item.name, default: item.default || false };
 });
 
-// ───── Парсинг URL-параметрів foundation/blush/lipstick/lipliner-product-sku ─────
-function getProductSkuFromUrl() {
-  const params = new URLSearchParams(window.location.search);
-  return params.get('foundation-product-sku');
-}
-
-function getBlushProductSkuFromUrl() {
-  const params = new URLSearchParams(window.location.search);
-  return params.get('blush-product-sku');
-}
-
-function getLipstickProductSkuFromUrl() {
-  const params = new URLSearchParams(window.location.search);
-  return params.get('lipstick-product-sku');
-}
-
-function getLiplinerProductSkuFromUrl() {
-  const params = new URLSearchParams(window.location.search);
-  return params.get('lipliner-product-sku');
-}
-
 // ───── Розділення тонів на зони, якщо передано product-sku ─────
 function computeToneZones(tones, targetSku) {
   if (!targetSku) return null;
@@ -373,20 +352,29 @@ function punchOutEyesMouth(ctx, landmarks, fw, fh) {
   ctx.restore();
 }
 
-// ───── Отримуємо дефолтний колір тону з URL або default:true ─────
-function getDefaultFoundationColor() {
-  const sku = getProductSkuFromUrl();
+// ───── Читаємо SKU з URL (якщо передано) — лише читання, без запису ─────
+function getProductSkuFromUrl(key) {
+  const params = new URLSearchParams(window.location.search);
+  return params.get(key);
+}
+
+// ───── Отримуємо дефолтний колір тону: props (HTML-атрибути) > URL > default:true ─────
+function resolveSku(skuFromProps, paramName) {
+  return skuFromProps || getProductSkuFromUrl(paramName) || undefined;
+}
+
+function getDefaultFoundationColor(foundationProductSku) {
+  const sku = resolveSku(foundationProductSku, 'foundation-product-sku');
   if (sku) {
     const found = foundationTones.find(t => t.sku === sku);
     if (found) return found.hex;
   }
-  // Беремо default, якщо позначено, або перший тон
   const def = foundationTones.find(t => t.default);
   return def ? def.hex : foundationTones[0]?.hex || '#f3cfb3';
 }
 
-function getDefaultBlushColor() {
-  const sku = getBlushProductSkuFromUrl();
+function getDefaultBlushColor(blushProductSku) {
+  const sku = resolveSku(blushProductSku, 'blush-product-sku');
   if (sku) {
     const found = blushTones.find(t => t.sku === sku);
     if (found) return found.hex;
@@ -395,8 +383,8 @@ function getDefaultBlushColor() {
   return def ? def.hex : blushTones[0]?.hex || '#f3bebe';
 }
 
-function getDefaultLipstickColor() {
-  const sku = getLipstickProductSkuFromUrl();
+function getDefaultLipstickColor(lipstickProductSku) {
+  const sku = resolveSku(lipstickProductSku, 'lipstick-product-sku');
   if (sku) {
     const found = lipstickTones.find(t => t.sku === sku);
     if (found) return found.hex;
@@ -405,8 +393,8 @@ function getDefaultLipstickColor() {
   return def ? def.hex : lipstickTones[0]?.hex || '#BD2846';
 }
 
-function getDefaultLiplinerColor() {
-  const sku = getLiplinerProductSkuFromUrl();
+function getDefaultLiplinerColor(liplinerProductSku) {
+  const sku = resolveSku(liplinerProductSku, 'lipliner-product-sku');
   if (sku) {
     const found = liplinerTones.find(t => t.sku === sku);
     if (found) return found.hex;
@@ -416,13 +404,13 @@ function getDefaultLiplinerColor() {
 }
 
 // ────────── Основний компонент ──────────
-function App() {
+function App({ foundationProductSku, blushProductSku, lipstickProductSku, liplinerProductSku }) {
+  const defaultFoundationColor = getDefaultFoundationColor(foundationProductSku);
+  const defaultBlushColor = getDefaultBlushColor(blushProductSku);
+  const defaultLipstickColor = getDefaultLipstickColor(lipstickProductSku);
+  const defaultLiplinerColor = getDefaultLiplinerColor(liplinerProductSku);
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
-  const defaultFoundationColor = getDefaultFoundationColor();
-  const defaultBlushColor = getDefaultBlushColor();
-  const defaultLipstickColor = getDefaultLipstickColor();
-  const defaultLiplinerColor = getDefaultLiplinerColor();
   const latestMakeupState = useRef({
     foundationColor: defaultFoundationColor,
     opacity: 0.39,
@@ -1351,12 +1339,8 @@ function App() {
   const [showLipstickTones, setShowLipstickTones] = useState(false);
   const [showLiplinerTones, setShowLiplinerTones] = useState(false);
 
-  // Парсинг product-sku з URL для розділення тонів на зони
-  const productSku = getProductSkuFromUrl();
-  const blushProductSku = getBlushProductSkuFromUrl();
-  const lipstickProductSku = getLipstickProductSkuFromUrl();
-  const liplinerProductSku = getLiplinerProductSkuFromUrl();
-  const toneZones = productSku ? computeToneZones(foundationTones, productSku) : null;
+  // Використовуємо SKU з props (передані через атрибути <virtual-try-on>)
+  const toneZones = foundationProductSku ? computeToneZones(foundationTones, foundationProductSku) : null;
   const blushZones = blushProductSku ? computeToneZones(blushTones, blushProductSku) : null;
   const lipstickZones = lipstickProductSku ? computeToneZones(lipstickTones, lipstickProductSku) : null;
   const liplinerZones = liplinerProductSku ? computeToneZones(liplinerTones, liplinerProductSku) : null;
