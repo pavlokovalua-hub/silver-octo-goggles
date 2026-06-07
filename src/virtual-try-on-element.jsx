@@ -99,12 +99,38 @@ class VirtualTryOnElement extends HTMLElement {
     super();
     this._root = null;
     this._isInitializing = false;
+    this._resizeObserver = null;
+
+    // ── Breakpoint for mobile vs desktop layout ──
+    // Замість @media (max-width: 1023px) ми використовуємо клас .vto-mobile,
+    // який додається на цей елемент на основі ширини самого блоку (не екрану).
+    this._mobileBreakpoint = 1024;
+  }
+
+  /**
+   * ── ResizeObserver: стежить за шириною цього елементу ──
+   * Якщо ширина < _mobileBreakpoint — додаємо клас .vto-mobile,
+   * інакше — прибираємо. CSS використовує цей клас замість @media.
+   */
+  _updateLayoutClass() {
+    const width = this.offsetWidth;
+    const isNarrow = width < this._mobileBreakpoint;
+    this.classList.toggle('vto-mobile', isNarrow);
   }
 
   async connectedCallback() {
     // Prevent double initialization
     if (this._root || this._isInitializing) return;
     this._isInitializing = true;
+
+    // ── Run ResizeObserver on this element ──
+    this._updateLayoutClass();
+    if (window.ResizeObserver) {
+      this._resizeObserver = new ResizeObserver(() => {
+        this._updateLayoutClass();
+      });
+      this._resizeObserver.observe(this);
+    }
 
     // Set URL params from HTML attributes
     const url = new URL(window.location);
@@ -162,6 +188,10 @@ class VirtualTryOnElement extends HTMLElement {
   }
 
   disconnectedCallback() {
+    if (this._resizeObserver) {
+      this._resizeObserver.disconnect();
+      this._resizeObserver = null;
+    }
     if (this._root) {
       this._root.unmount();
       this._root = null;

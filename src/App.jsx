@@ -1203,14 +1203,48 @@ function App() {
     link.click();
   };
 
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+  // ── Initialize isMobile from the host element's class ──
+  // The .vto-mobile class is already applied by the Web Component's
+  // connectedCallback() before React mounts, so we read it synchronously.
+  // In standalone dev mode (no <virtual-try-on> element), fall back to
+  // window.innerWidth for backward compatibility.
+  const getInitialMobile = () => {
+    try {
+      const host = document.querySelector('virtual-try-on');
+      if (host) return host.classList.contains('vto-mobile');
+      // Dev mode fallback
+      return window.innerWidth < 1024;
+    } catch {
+      return window.innerWidth < 1024;
+    }
+  };
+
+  const [isMobile, setIsMobile] = useState(getInitialMobile);
   const [activeColorPicker, setActiveColorPicker] = useState(null);
   const [showDesktopSettings, setShowDesktopSettings] = useState(false);
 
+  // ── Observe .vto-mobile class changes on the host <virtual-try-on> element ──
+  // This replaces window.innerWidth-based detection with container-based
+  // responsive layout (the class is managed by ResizeObserver in the Web Component).
+  // In standalone dev mode, falls back to window resize detection.
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 1024);
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
+    const host = document.querySelector('virtual-try-on');
+
+    if (host) {
+      // Plugin mode: observe class changes on the custom element
+      const update = () => setIsMobile(host.classList.contains('vto-mobile'));
+      update();
+
+      const observer = new MutationObserver(update);
+      observer.observe(host, { attributes: true, attributeFilter: ['class'] });
+      return () => observer.disconnect();
+    } else {
+      // Dev mode fallback: use window resize
+      const handleResize = () => setIsMobile(window.innerWidth < 1024);
+      handleResize();
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
   }, []);
 
   // ───── Блок "немає камери" ─────
