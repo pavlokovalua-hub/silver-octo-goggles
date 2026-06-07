@@ -5,6 +5,27 @@ import blushData from './datasets/blush.json';
 import lipsticksData from './datasets/lipsticks.json';
 import liplinerData from './datasets/lipliner.json';
 
+// ─── Module-level caches to prevent duplicate initialization ───
+// 1. FaceMesh instance caching — creating a new FaceMesh() each mount triggers
+//    locateFile to re-load WASM/internal assets (face_mesh_solution_* etc.)
+// 2. Camera started flag — prevents camera.start() (which calls getUserMedia)
+//    from being invoked more than once, avoiding multiple browser permission prompts
+let faceMeshInstance = null;
+let cameraStarted = false;
+
+function getFaceMesh() {
+  if (!faceMeshInstance) {
+    if (!window.FaceMesh) {
+      console.error("MediaPipe FaceMesh не завантажився з CDN!");
+      return null;
+    }
+    faceMeshInstance = new window.FaceMesh({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+    });
+  }
+  return faceMeshInstance;
+}
+
 const FOREHEAD_EXTEND_EYEBROW_OFFSET = 0.01;
 
 // ─────── Temporal landmark smoothing (low-pass filter for jitter reduction) ───────
@@ -518,6 +539,9 @@ function App() {
   const matteCanvasRef = useRef(null);
   const smoothedLandmarksRef = useRef(null);
   const isFirstFrameRef = useRef(true);
+  // Реф для зберігання екземплярів FaceMesh та Camera (для коректного cleanup)
+  const faceMeshRef = useRef(null);
+  const cameraRef = useRef(null);
   // Кешовані канваси для аналізу якості відео (щоб не створювати щокадру)
   const _detectCanvasRef = useRef(null);
   const _detectMaskRef = useRef(null);
@@ -588,15 +612,12 @@ function App() {
       setCameraSupported(false);
       return;
     }
-    const FaceMesh = window.FaceMesh;
+    const faceMesh = getFaceMesh();
 
-    if (!FaceMesh) {
+    if (!faceMesh) {
       console.error("MediaPipe FaceMesh не завантажився з CDN!");
     }
-
-    const faceMesh = new FaceMesh({
-      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
-    });
+    faceMeshRef.current = faceMesh;
     faceMesh.setOptions({
       maxNumFaces: 1,
       refineLandmarks: true,
@@ -619,8 +640,7 @@ function App() {
         width: 640,
         height: 480,
       });
-
-
+      cameraRef.current = camera;
 
       camera.start().catch(() => setCameraSupported(false));
 
@@ -631,7 +651,19 @@ function App() {
         }
       });
     }
-    return () => { };
+    return () => {
+      // Зупиняємо камеру та очищаємо ресурси при демонтуванні компонента
+      if (cameraRef.current) {
+        try {
+          cameraRef.current.stop();
+        } catch (e) {
+          // ігноруємо помилки при зупинці
+        }
+        cameraRef.current = null;
+      }
+      faceMeshRef.current = null;
+    };
+
   }, []);
 
   useEffect(() => {

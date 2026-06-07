@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Virtual Try‑On – Web Component Integration Example</title>
+
+  <!--
+    ================================================================
+    HOW TO BUILD THE WEB COMPONENT
+    ================================================================
+
+    1. Install dependencies (if not already done):
+       cd foundation-try-on
+       npm install
+
+    2. Build the web component:
+       npx vite build --config vite.lib.config.js
+
+       This produces:
+         dist/virtual-try-on.js   (641 KB, ~190 KB gzipped)
+         dist/style.css           (22 KB)
+
+       The JS file is self-contained — it registers <virtual-try-on>
+       as a standard HTML custom element.
+
+    ================================================================
+    HOW TO USE ON YOUR SITE
+    ================================================================
+
+    Just include the script and use the tag:
+
+      <script src="dist/virtual-try-on.js"></script>
+      <virtual-try-on
+        foundation-product-sku="212-66160"
+        blush-product-sku="212-15505"
+        lipstick-product-sku="212-12703"
+        lipliner-product-sku="212-519050"
+      ></virtual-try-on>
+
+    That's it! Works in any framework or plain HTML.
+    ================================================================
+  -->
+
+  <!-- Load the web component (self-contained, includes React + styles) -->
+  <script src="dist/virtual-try-on.js"></script>
+
+  <style>
+    /* ===== Page styles (not part of the widget) ===== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+        Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      color: #fff;
+      min-height: 100vh;
+    }
+
+    .page-header {
+      text-align: center;
+      padding: 2rem 1rem 1rem;
+    }
+
+    .page-header h1 {
+      font-size: 1.8rem;
+      background: linear-gradient(90deg, #f9a8d4, #c084fc, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .page-header p {
+      color: rgba(255, 255, 255, 0.6);
+      margin-top: 0.5rem;
+      font-size: 0.95rem;
+    }
+
+    .widget-container {
+      height: 700px;
+      width: 700px;
+      max-width: 900px;
+      margin: 1.5rem auto;
+      padding: 0 1rem;
+    }
+
+    /* The custom element — works like any HTML tag */
+    virtual-try-on {
+      display: block;
+      width: 100%;
+      height: 700px;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow:
+        0 0 40px rgba(192, 132, 252, 0.15),
+        0 20px 60px rgba(0, 0, 0, 0.5);
+    }
+
+    .info-section {
+      max-width: 900px;
+      margin: 2rem auto;
+      padding: 0 1rem;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1.5rem;
+    }
+
+    .info-card {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 1.5rem;
+    }
+
+    .info-card h3 {
+      font-size: 1rem;
+      color: #c084fc;
+      margin-bottom: 0.75rem;
+    }
+
+    .info-card p,
+    .info-card li {
+      font-size: 0.85rem;
+      color: rgba(255, 255, 255, 0.7);
+      line-height: 1.6;
+    }
+
+    .info-card ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .info-card ul li::before {
+      content: "✓ ";
+      color: #4ade80;
+    }
+
+    .info-card code {
+      display: inline-block;
+      background: rgba(255, 255, 255, 0.1);
+      padding: 0.1em 0.4em;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      color: #f9a8d4;
+    }
+
+    .code-block {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 8px;
+      padding: 1rem;
+      font-family: "SF Mono", "Fira Code", monospace;
+      font-size: 0.8rem;
+      color: #a5f3fc;
+      overflow-x: auto;
+      white-space: pre;
+    }
+
+    .page-footer {
+      text-align: center;
+      padding: 2rem;
+      color: rgba(255, 255, 255, 0.3);
+      font-size: 0.8rem;
+    }
+
+    @media (max-width: 768px) {
+      .info-section {
+        grid-template-columns: 1fr;
+      }
+
+      virtual-try-on {
+        height: 500px;
+        border-radius: 12px;
+      }
+
+      .page-header h1 {
+        font-size: 1.3rem;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ===== Header ===== -->
+  <header class="page-header">
+    <h1>💄 Virtual Makeup Try‑On</h1>
+    <p>Web Component integration — works with any framework</p>
+  </header>
+
+  <!-- ===== The Widget ===== -->
+  <div class="widget-container">
+    <!--
+      This is the custom element.
+      It registers itself as <virtual-try-on> via the script above.
+
+      Supported attributes:
+        foundation-product-sku  — pre-select a foundation shade
+        blush-product-sku       — pre-select a blush shade
+        lipstick-product-sku    — pre-select a lipstick shade
+        lipliner-product-sku    — pre-select a lipliner shade
+    -->
+    <virtual-try-on
+      foundation-product-sku="212-66160"
+      blush-product-sku="212-15505"
+      lipstick-product-sku="212-12703"
+      lipliner-product-sku="212-519050"
+    ></virtual-try-on>
+  </div>
+
+  <!-- ===== Info Cards ===== -->
+  <section class="info-section">
+    <div class="info-card">
+      <h3>📦 How to use</h3>
+      <ol style="padding-left: 1.2rem; color: rgba(255,255,255,0.7); font-size: 0.85rem; line-height: 1.8;">
+        <li>Build the web component once: <br><code style="font-size:0.75rem;">npx vite build --config vite.lib.config.js</code></li>
+        <li>Include <code>dist/virtual-try-on.js</code> on your page</li>
+        <li>Place <code><virtual-try-on></code> anywhere in your HTML</li>
+        <li>That's it — no framework required, no extra setup</li>
+      </ol>
+    </div>
+
+    <div class="info-card">
+      <h3>✨ Features</h3>
+      <ul>
+        <li>Real-time face tracking via MediaPipe</li>
+        <li>Foundation, blush, lipstick, lip liner, gloss</li>
+        <li>Auto foundation shade matching</li>
+        <li>Skin smoothing (WASM)</li>
+        <li>Works on mobile & desktop</li>
+        <li>Zero CSS conflicts — fully encapsulated</li>
+      </ul>
+    </div>
+
+    <div class="info-card">
+      <h3>🔧 Configuration via attributes</h3>
+      <div class="code-block"><virtual-try-on
+  foundation-product-sku="212-66160"
+  blush-product-sku="212-15505"
+  lipstick-product-sku="212-12703"
+  lipliner-product-sku="212-519050"
+></virtual-try-on></div>
+    </div>
+
+    <div class="info-card">
+      <h3>⚠️ Requirements</h3>
+      <ul>
+        <li>Page must be served over <strong>HTTPS</strong> (or localhost)</li>
+        <li>Browser must support <code>getUserMedia</code> (camera access)</li>
+        <li>Allow camera permission when prompted</li>
+        <li>The widget manages its own lifecycle — mount/unmount is automatic</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===== Footer ===== -->
+  <footer class="page-footer">
+    Virtual Try‑On Web Component &mdash; Built with React 19, MediaPipe FaceMesh, Vite
+  </footer>
+
+</body>
+</html>

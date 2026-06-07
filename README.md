@@ -194,74 +194,103 @@ npm install
 
 #### Step 2: Create a web component wrapper — `src/virtual-try-on-element.jsx`
 
-Create a file that exports a custom element wrapping the React app:
+Create a file that exports a custom element wrapping the React app.  
+It will automatically inject the CSS and load MediaPipe scripts from CDN.
+
+The file already exists in the repository — you can use it directly:
 
 ```jsx
 // src/virtual-try-on-element.jsx
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
-import './index.css';
+// Use scoped styles (no global body/html/#root leakage)
+import './virtual-try-on.css';
+
+const MEDIAPIPE_SCRIPTS = [
+  'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js',
+  'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js',
+];
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) { resolve(); return; }
+    const s = document.createElement('script');
+    s.src = src; s.crossOrigin = 'anonymous';
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error(`Failed to load: ${src}`));
+    document.head.appendChild(s);
+  });
+}
+
+function injectCSS(url) {
+  if (document.querySelector(`link[href="${url}"]`)) return;
+  const link = document.createElement('link');
+  link.rel = 'stylesheet'; link.href = url;
+  document.head.appendChild(link);
+}
+
+function getScriptDir() {
+  const scripts = document.getElementsByTagName('script');
+  const src = scripts[scripts.length - 1]?.src || '';
+  return src.includes('/') ? src.substring(0, src.lastIndexOf('/')) : '.';
+}
 
 class VirtualTryOnElement extends HTMLElement {
-  constructor() {
-    super();
-    this._root = null;
-  }
+  constructor() { super(); this._root = null; this._initialized = false; }
 
-  connectedCallback() {
-    // Read attributes for initial config
-    const foundationSku = this.getAttribute('foundation-product-sku');
-    const blushSku = this.getAttribute('blush-product-sku');
-    const lipstickSku = this.getAttribute('lipstick-product-sku');
-    const liplinerSku = this.getAttribute('lipliner-product-sku');
+  async connectedCallback() {
+    if (this._initialized) return;
+    this._initialized = true;
 
-    // Set URL params so the App can pick them up
-    if (foundationSku || blushSku || lipstickSku || liplinerSku) {
-      const url = new URL(window.location);
-      if (foundationSku) url.searchParams.set('foundation-product-sku', foundationSku);
-      if (blushSku) url.searchParams.set('blush-product-sku', blushSku);
-      if (lipstickSku) url.searchParams.set('lipstick-product-sku', lipstickSku);
-      if (liplinerSku) url.searchParams.set('lipliner-product-sku', liplinerSku);
-      window.history.replaceState({}, '', url);
+    // Read attributes
+    const attrs = ['foundation-product-sku','blush-product-sku','lipstick-product-sku','lipliner-product-sku'];
+    const url = new URL(window.location);
+    let changed = false;
+    for (const attr of attrs) {
+      const val = this.getAttribute(attr);
+      if (val) { url.searchParams.set(attr, val); changed = true; }
     }
+    if (changed) window.history.replaceState({}, '', url);
 
-    // Mount React app
-    this._root = ReactDOM.createRoot(this);
-    this._root.render(
-      <React.StrictMode>
-        <App />
-      </React.StrictMode>
-    );
+    try {
+      injectCSS(`${getScriptDir()}/style.css`);
+      await Promise.all(MEDIAPIPE_SCRIPTS.map(loadScript));
+      this._root = ReactDOM.createRoot(this);
+      this._root.render(<App />);
+    } catch (err) {
+      this.innerHTML = `<div style="padding:2rem;text-align:center;color:#f87171;background:#1a1a2e;border-radius:12px;">
+        <h3>⚠️ Failed to load</h3><p style="color:rgba(255,255,255,0.6)">${err.message}</p></div>`;
+    }
   }
 
   disconnectedCallback() {
-    if (this._root) {
-      this._root.unmount();
-      this._root = null;
-    }
+    if (this._root) { this._root.unmount(); this._root = null; }
   }
 }
 
-// Define the custom element (only once)
 if (!customElements.get('virtual-try-on')) {
   customElements.define('virtual-try-on', VirtualTryOnElement);
 }
-
 export default VirtualTryOnElement;
 ```
 
-#### Step 3: Update `vite.config.js` for library mode
 
-The build should produce a single JavaScript file that registers the custom element globally.
+#### Step 3: Build config (already in repo — `vite.lib.config.js`)
+
+The repository includes a dedicated Vite config for the library build.  
+It defines `process.env.NODE_ENV` to avoid the "process is not defined" error in the browser.
 
 ```js
-// vite.config.js
+// vite.lib.config.js
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
+  define: {
+    'process.env.NODE_ENV': '"production"',
+  },
   build: {
     lib: {
       entry: 'src/virtual-try-on-element.jsx',
@@ -270,10 +299,8 @@ export default defineConfig({
       fileName: () => 'virtual-try-on.js',
     },
     rollupOptions: {
-      // Externalize React — the host page must provide it (optional)
       external: [],
       output: {
-        // Inline all styles
         inlineDynamicImports: true,
       },
     },
@@ -284,8 +311,9 @@ export default defineConfig({
 #### Step 4: Build the web component
 
 ```bash
-npx vite build
+npx vite build --config vite.lib.config.js
 ```
+
 
 The output will be in `dist/virtual-try-on.js` — a single self-contained script.
 
