@@ -67,6 +67,36 @@ URL: `https://pavlokovalua-hub.github.io/silver-octo-goggles/?lipstick-product-s
 
 **Example:** [Open with lipstick Ariadna](https://pavlokovalua-hub.github.io/silver-octo-goggles/?lipstick-product-sku=212-12703)
 
+### `recomended-foundation-sku`
+
+This parameter creates a **single-product preview** — ideal when you have already selected a foundation shade for the user. When passed, all controls (blush, lipstick, lip liner pickers, auto-match button, settings) are **hidden** so the user can only see how the chosen foundation looks on their skin.
+
+The parameter also disables drawing of blush, lipstick, and lip liner — only the foundation layer is rendered.
+
+Usage:
+
+```
+https://pavlokovalua-hub.github.io/silver-octo-goggles/?recomended-foundation-sku=212-66160
+```
+
+| SKU | Lightness |
+|-----|-----------|
+| 212-66005 | Lightest |
+| 212-66010 | |
+| 212-66015 | |
+| … | … |
+| 212-66250 | Deepest |
+
+**Example:** [Single-product view with foundation 212-66160](https://pavlokovalua-hub.github.io/silver-octo-goggles/?recomended-foundation-sku=212-66160)
+
+This parameter can also be passed as an HTML attribute on the `<virtual-try-on>` custom element:
+
+```html
+<virtual-try-on recomended-foundation-sku="212-66160"></virtual-try-on>
+```
+
+---
+
 ### `lipliner-product-sku`
 
 URL: `https://pavlokovalua-hub.github.io/silver-octo-goggles/?lipliner-product-sku=212-519XXX`

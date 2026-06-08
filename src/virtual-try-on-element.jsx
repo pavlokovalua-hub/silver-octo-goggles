@@ -155,6 +155,7 @@ class VirtualTryOnElement extends HTMLElement {
             blushProductSku={this.getAttribute('blush-product-sku') || undefined}
             lipstickProductSku={this.getAttribute('lipstick-product-sku') || undefined}
             liplinerProductSku={this.getAttribute('lipliner-product-sku') || undefined}
+            recomendedFoundationSku={this.getAttribute('recomended-foundation-sku') || undefined}
           />
         );
       }

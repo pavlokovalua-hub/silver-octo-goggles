@@ -925,12 +925,39 @@ virtual-try-on.vto-mobile .auto-match-notification {
   display: none !important;
 }
 
+/* ── Single-product view: hide all controls for a clean preview ── */
+.mobile-layout-single-product .mobile-auto-match-btn,
+.mobile-layout-single-product .controls-panel,
+.mobile-layout-single-product .shadow-warning-overlay {
+  display: none !important;
+}
+
 .desktop-layout {
   position: relative;
   width: 100%;
   height: 100%;
   overflow: hidden;
   background: transparent;
+}
+
+.desktop-layout-single-product .desktop-dock,
+.desktop-layout-single-product .desktop-shadow-warning,
+.desktop-layout-single-product .desktop-settings-overlay,
+.desktop-layout-single-product .desktop-color-picker-overlay,
+.desktop-layout-single-product .foundation-tones-overlay {
+  display: none !important;
+}
+
+/* Also hide all popup overlays in single-product view */
+.mobile-layout-single-product .foundation-tones-overlay,
+.mobile-layout-single-product .color-picker-overlay {
+  display: none !important;
+}
+
+/* Hide auto-match popup when in single-product view */
+.mobile-layout-single-product .auto-match-popup-overlay,
+.desktop-layout-single-product .auto-match-popup-overlay {
+  display: none !important;
 }
 
 .desktop-video-area {
