@@ -42,7 +42,9 @@
     ================================================================
   -->
 
-  <!-- Load the web component (self-contained, includes React + styles) -->
+  <!-- Web component script — loads upfront so CSS path resolves correctly.
+       No <virtual-try-on> element exists in the DOM yet, so no camera is requested.
+       Clicking the "Launch" button below creates the element dynamically. -->
   <script src="dist/virtual-try-on.js"></script>
 
   <style>
@@ -86,6 +88,7 @@
       max-width: 900px;
       margin: 1.5rem auto;
       padding: 0 1rem;
+      position: relative;
     }
 
     /* The custom element — works like any HTML tag */
@@ -98,6 +101,87 @@
       box-shadow:
         0 0 40px rgba(192, 132, 252, 0.15),
         0 20px 60px rgba(0, 0, 0, 0.5);
+      /* Selfie mirror — canvas inside the component handles mirroring */
+    }
+
+    /* ── Placeholder (shown before launch) ── */
+    #tryon-placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.03);
+      border: 2px dashed rgba(255, 255, 255, 0.15);
+      border-radius: 16px;
+    }
+
+    .placeholder-content {
+      text-align: center;
+      padding: 2rem;
+    }
+
+    .placeholder-icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+      opacity: 0.8;
+    }
+
+    .placeholder-content h2 {
+      font-size: 1.5rem;
+      margin-bottom: 0.75rem;
+      color: #fff;
+    }
+
+    .placeholder-content p {
+      color: rgba(255, 255, 255, 0.6);
+      font-size: 0.95rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .launch-button {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 1rem 2.5rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #fff;
+      background: linear-gradient(135deg, #c084fc, #818cf8);
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s;
+      box-shadow: 0 4px 20px rgba(192, 132, 252, 0.3);
+    }
+
+    .launch-button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 28px rgba(192, 132, 252, 0.45);
+    }
+
+    .launch-button:active {
+      transform: translateY(0);
+    }
+
+    .launch-button.loading {
+      pointer-events: none;
+      opacity: 0.7;
+    }
+
+    .btn-icon {
+      font-size: 1.2rem;
+    }
+
+    .placeholder-note {
+      margin-top: 1rem;
+      font-size: 0.8rem !important;
+      color: rgba(255, 255, 255, 0.35) !important;
+    }
+
+    /* ── State: placeholder hidden, widget visible ── */
+    #tryon-placeholder.hidden {
+      display: none;
     }
 
     .info-section {
@@ -191,26 +275,24 @@
     <p>Web Component integration — works with any framework</p>
   </header>
 
-  <!-- ===== The Widget ===== -->
-  <div class="widget-container">
+  <!-- ===== The Widget (lazy start) ===== -->
+  <div class="widget-container" id="tryon-widget-container">
     <!--
-      This is the custom element.
-      It registers itself as <virtual-try-on> via the script above.
-
-      Supported attributes:
-        foundation-product-sku    — pre-select a foundation shade
-        blush-product-sku         — pre-select a blush shade
-        lipstick-product-sku      — pre-select a lipstick shade
-        lipliner-product-sku      — pre-select a lipliner shade
-        recomended-foundation-sku — foundation SKU for a minimal/single-product view
-                                    (hides all controls, auto-match, blush, lip, liner)
+      The <virtual-try-on> element is NOT present in the DOM initially.
+      Click the "Launch" button below to create it and start the try-on.
     -->
-    <virtual-try-on
-      foundation-product-sku="212-66160"
-      blush-product-sku="212-15505"
-      lipstick-product-sku="212-12703"
-      lipliner-product-sku="212-519050"
-    ></virtual-try-on>
+    <div id="tryon-placeholder">
+      <div class="placeholder-content">
+        <div class="placeholder-icon">📷</div>
+        <h2>Ready to Try On?</h2>
+        <p>Click the button below to launch the virtual makeup experience.</p>
+        <button id="launch-btn" class="launch-button">
+          <span class="btn-icon">✨</span>
+          Launch Virtual Try‑On
+        </button>
+        <p class="placeholder-note">Camera access will be requested after clicking.</p>
+      </div>
+    </div>
   </div>
 
   <!-- ===== Info Cards ===== -->
@@ -220,7 +302,7 @@
       <ol style="padding-left: 1.2rem; color: rgba(255,255,255,0.7); font-size: 0.85rem; line-height: 1.8;">
         <li>Build the web component once: <br><code style="font-size:0.75rem;">npx vite build --config vite.lib.config.js</code></li>
         <li>Include <code>dist/virtual-try-on.js</code> on your page</li>
-        <li>Place <code><virtual-try-on></code> anywhere in your HTML</li>
+        <li>Place <code>&lt;virtual-try-on&gt;</code> anywhere in your HTML</li>
         <li>That's it — no framework required, no extra setup</li>
       </ol>
     </div>
@@ -239,12 +321,12 @@
 
     <div class="info-card">
       <h3>🔧 Configuration via attributes</h3>
-      <div class="code-block"><virtual-try-on
+      <div class="code-block">&lt;virtual-try-on
   foundation-product-sku="212-66160"
   blush-product-sku="212-15505"
   lipstick-product-sku="212-12703"
   lipliner-product-sku="212-519050"
-></virtual-try-on></div>
+&gt;&lt;/virtual-try-on&gt;</div>
     </div>
 
     <div class="info-card">
@@ -262,6 +344,39 @@
   <footer class="page-footer">
     Virtual Try‑On Web Component &mdash; Built with React 19, MediaPipe FaceMesh, Vite
   </footer>
+
+  <!-- ===== Lazy Launch Script ===== -->
+  <script>
+    (function() {
+      const launchBtn = document.getElementById('launch-btn');
+      const placeholder = document.getElementById('tryon-placeholder');
+      const container = document.getElementById('tryon-widget-container');
+
+      if (!launchBtn || !placeholder || !container) return;
+
+      launchBtn.addEventListener('click', function onClick() {
+        // Disable button to prevent double clicks
+        launchBtn.classList.add('loading');
+        launchBtn.textContent = 'Loading…';
+
+        // 1. Hide the placeholder
+        placeholder.classList.add('hidden');
+
+        // 2. Create the <virtual-try-on> element with the same attributes.
+        //    The custom element is already registered (script in <head>),
+        //    so appending it triggers connectedCallback which loads MediaPipe,
+        //    mounts React, and requests camera access.
+        const el = document.createElement('virtual-try-on');
+        el.setAttribute('foundation-product-sku', '212-66160');
+        el.setAttribute('blush-product-sku', '212-15505');
+        el.setAttribute('lipstick-product-sku', '212-12703');
+        el.setAttribute('lipliner-product-sku', '212-519050');
+
+        // 3. Append to the container — connectedCallback fires now
+        container.appendChild(el);
+      });
+    })();
+  </script>
 
 </body>
 </html>

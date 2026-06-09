@@ -82,16 +82,32 @@ function injectCSS(url) {
 }
 
 // ── Resolve the CSS path relative to the current script ──
+// We look for the <script> tag that has 'virtual-try-on' in its src.
+// This works even when connectedCallback fires asynchronously and
+// document.currentScript is no longer available.
 function getScriptDir() {
+  // 1. Try document.currentScript first (works during synchronous execution)
   if (document.currentScript) {
     const src = document.currentScript.src;
+    if (src) {
+      return src.substring(0, src.lastIndexOf('/'));
+    }
+  }
+  // 2. Find the script that registered the custom element (by src pattern)
+  const scripts = document.querySelectorAll('script[src*="virtual-try-on"]');
+  if (scripts.length > 0) {
+    const src = scripts[scripts.length - 1].src;
     return src.substring(0, src.lastIndexOf('/'));
   }
-  const scripts = document.getElementsByTagName('script');
-  const currentScript = scripts[scripts.length - 1];
-  const src = currentScript?.src || '';
-  const idx = src.lastIndexOf('/');
-  return idx !== -1 ? src.substring(0, idx) : '.';
+  // 3. Fallback to the last script with a non-empty src
+  const allScripts = document.getElementsByTagName('script');
+  for (let i = allScripts.length - 1; i >= 0; i--) {
+    const src = allScripts[i].src;
+    if (src) {
+      return src.substring(0, src.lastIndexOf('/'));
+    }
+  }
+  return '.';
 }
 
 class VirtualTryOnElement extends HTMLElement {
