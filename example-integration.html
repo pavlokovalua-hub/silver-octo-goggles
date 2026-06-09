@@ -12,6 +12,11 @@
       box-sizing: border-box;
     }
 
+    html {
+      overflow-x: hidden;
+      min-height: 100%;
+    }
+
     body {
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
         "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
@@ -26,10 +31,7 @@
     body::before {
       content: '';
       position: fixed;
-      top: -50%;
-      left: -50%;
-      width: 200%;
-      height: 200%;
+      inset: 0;
       background:
         radial-gradient(ellipse 600px 400px at 20% 20%, rgba(192, 132, 252, 0.08) 0%, transparent 60%),
         radial-gradient(ellipse 500px 500px at 80% 80%, rgba(129, 140, 248, 0.06) 0%, transparent 60%),
@@ -957,6 +959,9 @@
       .nav-links {
         display: none;
       }
+      .nav-right {
+        display: none;
+      }
       .mobile-menu-btn {
         display: flex;
       }
@@ -1186,7 +1191,6 @@
       const themeSwitch = document.getElementById('theme-switch');
       const iconDark = document.getElementById('icon-dark');
       const iconLight = document.getElementById('icon-light');
-      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
       const saved = localStorage.getItem('visio-theme');
 
       function setTheme(isLight) {
@@ -1231,7 +1235,6 @@
         if (isNarrow) {
           widget.classList.add('mobile-view');
         } else {
-          // Restore the user's preference when going back to desktop
           if (!isMobile) {
             widget.classList.remove('mobile-view');
           }
@@ -1254,7 +1257,6 @@
         }
       });
 
-      // Check on load and on resize
       updateToggleVisibility();
       window.addEventListener('resize', updateToggleVisibility);
     })();
