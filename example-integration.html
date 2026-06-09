@@ -3,52 +3,9 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Virtual Try‑On – Web Component Integration Example</title>
-
-  <!--
-    ================================================================
-    HOW TO BUILD THE WEB COMPONENT
-    ================================================================
-
-    1. Install dependencies (if not already done):
-       cd foundation-try-on
-       npm install
-
-    2. Build the web component:
-       npx vite build --config vite.lib.config.js
-
-       This produces:
-         dist/virtual-try-on.js   (641 KB, ~190 KB gzipped)
-         dist/style.css           (22 KB)
-
-       The JS file is self-contained — it registers <virtual-try-on>
-       as a standard HTML custom element.
-
-    ================================================================
-    HOW TO USE ON YOUR SITE
-    ================================================================
-
-    Just include the script and use the tag:
-
-      <script src="dist/virtual-try-on.js"></script>
-      <virtual-try-on
-        foundation-product-sku="212-66160"
-        blush-product-sku="212-15505"
-        lipstick-product-sku="212-12703"
-        lipliner-product-sku="212-519050"
-      ></virtual-try-on>
-
-    That's it! Works in any framework or plain HTML.
-    ================================================================
-  -->
-
-  <!-- Web component script — loads upfront so CSS path resolves correctly.
-       No <virtual-try-on> element exists in the DOM yet, so no camera is requested.
-       Clicking the "Launch" button below creates the element dynamically. -->
+  <title>Visio — Virtual Makeup Try-On</title>
   <script src="dist/virtual-try-on.js"></script>
-
   <style>
-    /* ===== Page styles (not part of the widget) ===== */
     * {
       margin: 0;
       padding: 0;
@@ -56,297 +13,881 @@
     }
 
     body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
-        Oxygen, Ubuntu, Cantarell, sans-serif;
-      background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+        "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: #0a0a0f;
       color: #fff;
       min-height: 100vh;
+      overflow-x: hidden;
     }
 
-    .page-header {
-      text-align: center;
-      padding: 2rem 1rem 1rem;
+    /* ── Background Effects ── */
+    body::before {
+      content: '';
+      position: fixed;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background:
+        radial-gradient(ellipse 600px 400px at 20% 20%, rgba(192, 132, 252, 0.08) 0%, transparent 60%),
+        radial-gradient(ellipse 500px 500px at 80% 80%, rgba(129, 140, 248, 0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 400px 600px at 50% 0%, rgba(249, 168, 212, 0.05) 0%, transparent 60%);
+      pointer-events: none;
+      z-index: 0;
     }
 
-    .page-header h1 {
-      font-size: 1.8rem;
+    /* ── Grid overlay ── */
+    .grid-overlay {
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+      background-size: 60px 60px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    /* ── Navigation ── */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      padding: 1rem 2.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(10, 10, 15, 0.7);
+      backdrop-filter: blur(20px) saturate(1.2);
+      -webkit-backdrop-filter: blur(20px) saturate(1.2);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 1.25rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .logo-icon {
+      width: 28px;
+      height: 28px;
+      background: linear-gradient(135deg, #c084fc, #818cf8);
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+    }
+
+    .logo span {
       background: linear-gradient(90deg, #f9a8d4, #c084fc, #818cf8);
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
     }
 
-    .page-header p {
-      color: rgba(255, 255, 255, 0.6);
-      margin-top: 0.5rem;
-      font-size: 0.95rem;
-    }
-
-    .widget-container {
-      height: 700px;
-      width: 700px;
-      max-width: 900px;
-      margin: 1.5rem auto;
-      padding: 0 1rem;
-      position: relative;
-    }
-
-    /* The custom element — works like any HTML tag */
-    virtual-try-on {
-      display: block;
-      width: 100%;
-      height: 700px;
-      border-radius: 16px;
-      overflow: hidden;
-      box-shadow:
-        0 0 40px rgba(192, 132, 252, 0.15),
-        0 20px 60px rgba(0, 0, 0, 0.5);
-      /* Selfie mirror — canvas inside the component handles mirroring */
-    }
-
-    /* ── Placeholder (shown before launch) ── */
-    #tryon-placeholder {
+    .nav-links {
       display: flex;
       align-items: center;
-      justify-content: center;
-      width: 100%;
-      height: 100%;
-      background: rgba(255, 255, 255, 0.03);
-      border: 2px dashed rgba(255, 255, 255, 0.15);
-      border-radius: 16px;
+      gap: 2rem;
+      list-style: none;
+      font-size: 0.85rem;
     }
 
-    .placeholder-content {
+    .nav-links a {
+      color: rgba(255, 255, 255, 0.5);
+      text-decoration: none;
+      transition: color 0.2s;
+      font-weight: 500;
+    }
+
+    .nav-links a:hover {
+      color: rgba(255, 255, 255, 0.9);
+    }
+
+    /* ── Main Layout ── */
+    main {
+      position: relative;
+      z-index: 1;
+      padding-top: 80px;
+    }
+
+    /* ── Hero Section ── */
+    .hero {
       text-align: center;
-      padding: 2rem;
+      padding: 4rem 2rem 2rem;
+      max-width: 720px;
+      margin: 0 auto;
     }
 
-    .placeholder-icon {
-      font-size: 4rem;
-      margin-bottom: 1rem;
-      opacity: 0.8;
-    }
-
-    .placeholder-content h2 {
-      font-size: 1.5rem;
-      margin-bottom: 0.75rem;
-      color: #fff;
-    }
-
-    .placeholder-content p {
-      color: rgba(255, 255, 255, 0.6);
-      font-size: 0.95rem;
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      padding: 0.35rem 1rem;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #c084fc;
+      background: rgba(192, 132, 252, 0.1);
+      border: 1px solid rgba(192, 132, 252, 0.2);
+      border-radius: 100px;
       margin-bottom: 1.5rem;
     }
 
-    .launch-button {
+    .hero h1 {
+      font-size: 3.5rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      margin-bottom: 1rem;
+    }
+
+    .hero h1 .gradient {
+      background: linear-gradient(90deg, #f9a8d4, #c084fc, #818cf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .hero p {
+      font-size: 1.1rem;
+      color: rgba(255, 255, 255, 0.5);
+      line-height: 1.7;
+      max-width: 520px;
+      margin: 0 auto 2rem;
+    }
+
+    /* ── CTA Buttons ── */
+    .hero-actions {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      flex-wrap: wrap;
+    }
+
+    .btn-primary {
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
-      padding: 1rem 2.5rem;
-      font-size: 1.1rem;
+      padding: 0.85rem 2rem;
+      font-size: 0.95rem;
       font-weight: 600;
       color: #fff;
       background: linear-gradient(135deg, #c084fc, #818cf8);
       border: none;
       border-radius: 12px;
       cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
-      box-shadow: 0 4px 20px rgba(192, 132, 252, 0.3);
+      transition: transform 0.2s, box-shadow 0.25s;
+      box-shadow: 0 4px 24px rgba(192, 132, 252, 0.3);
     }
 
-    .launch-button:hover {
+    .btn-primary:hover {
       transform: translateY(-2px);
-      box-shadow: 0 6px 28px rgba(192, 132, 252, 0.45);
+      box-shadow: 0 8px 32px rgba(192, 132, 252, 0.45);
     }
 
-    .launch-button:active {
+    .btn-primary:active {
       transform: translateY(0);
     }
 
-    .launch-button.loading {
+    .btn-primary.loading {
       pointer-events: none;
       opacity: 0.7;
     }
 
-    .btn-icon {
-      font-size: 1.2rem;
+    .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.85rem 2rem;
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: rgba(255, 255, 255, 0.7);
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* ── Trusted by Bar ── */
+    .trusted-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 2.5rem;
+      padding: 2rem 2rem 1rem;
+      flex-wrap: wrap;
+    }
+
+    .trusted-item {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.75rem;
+      color: rgba(255, 255, 255, 0.25);
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+
+    .trusted-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #4ade80;
+    }
+
+    /* ── Mobile Hamburger ── */
+    .mobile-menu-btn {
+      display: none;
+      flex-direction: column;
+      gap: 4px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 4px;
+    }
+
+    .mobile-menu-btn span {
+      display: block;
+      width: 20px;
+      height: 2px;
+      background: rgba(255, 255, 255, 0.6);
+      border-radius: 2px;
+      transition: transform 0.3s, opacity 0.3s;
+    }
+
+    .mobile-menu-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 99;
+      background: rgba(10, 10, 15, 0.95);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 2rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+
+    .mobile-menu-overlay.open {
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .mobile-menu-overlay a {
+      color: rgba(255, 255, 255, 0.8);
+      font-size: 1.3rem;
+      font-weight: 600;
+      text-decoration: none;
+      letter-spacing: -0.01em;
+      transition: color 0.2s;
+    }
+
+    .mobile-menu-overlay a:hover {
+      color: #c084fc;
+    }
+
+    /* ── Widget Section ── */
+    .widget-section {
+      padding: 0 2rem 2rem;
+    }
+
+    .widget-container {
+      height: 700px;
+      max-width: 1050px;
+      margin: 0 auto;
+      position: relative;
+      min-height: 700px;
+      transition: max-width 0.4s ease, min-height 0.4s ease;
+    }
+
+    .widget-container.mobile-view {
+      max-width: 700px;
+    }
+
+    /* Decorative glow behind widget */
+    .widget-container::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(192, 132, 252, 0.12) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    virtual-try-on {
+      display: block;
+      width: 100%;
+      height: 700px;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow:
+        0 0 60px rgba(192, 132, 252, 0.1),
+        0 30px 80px rgba(0, 0, 0, 0.6);
+      position: relative;
+    }
+
+    /* ── Placeholder ── */
+    #tryon-placeholder {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 700px;
+      background: linear-gradient(
+        160deg,
+        rgba(255, 255, 255, 0.03) 0%,
+        rgba(192, 132, 252, 0.04) 50%,
+        rgba(129, 140, 248, 0.03) 100%
+      );
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 20px;
+      position: relative;
+    }
+
+    .placeholder-content {
+      text-align: center;
+      padding: 2rem;
+      animation: fadeInUp 0.6s ease-out;
+    }
+
+    .placeholder-icon-wrap {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 1.5rem;
+      background: linear-gradient(135deg, rgba(192, 132, 252, 0.15), rgba(129, 140, 248, 0.15));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+    }
+
+    .placeholder-content h2 {
+      font-size: 1.6rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-bottom: 0.5rem;
+    }
+
+    .placeholder-content p {
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 0.9rem;
+      margin-bottom: 1.75rem;
     }
 
     .placeholder-note {
-      margin-top: 1rem;
-      font-size: 0.8rem !important;
-      color: rgba(255, 255, 255, 0.35) !important;
+      margin-top: 1.25rem;
+      font-size: 0.75rem !important;
+      color: rgba(255, 255, 255, 0.2) !important;
     }
 
-    /* ── State: placeholder hidden, widget visible ── */
     #tryon-placeholder.hidden {
       display: none;
     }
 
-    .info-section {
-      max-width: 900px;
-      margin: 2rem auto;
-      padding: 0 1rem;
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 1.5rem;
+    /* ── Device Toggle ── */
+    .device-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-top: 1.25rem;
+      margin-bottom: 0.5rem;
     }
 
-    .info-card {
-      background: rgba(255, 255, 255, 0.05);
+    .device-toggle-label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.35);
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      user-select: none;
+      transition: color 0.25s;
+    }
+
+    .device-toggle-label.active {
+      color: rgba(255, 255, 255, 0.85);
+    }
+
+    .device-toggle-switch {
+      position: relative;
+      width: 48px;
+      height: 26px;
+      background: rgba(255, 255, 255, 0.08);
       border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 12px;
-      padding: 1.5rem;
+      border-radius: 100px;
+      cursor: pointer;
+      transition: background 0.25s, border-color 0.25s;
+      flex-shrink: 0;
     }
 
-    .info-card h3 {
-      font-size: 1rem;
-      color: #c084fc;
+    .device-toggle-switch:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.18);
+    }
+
+    .device-toggle-switch .knob {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 18px;
+      height: 18px;
+      background: linear-gradient(135deg, #c084fc, #818cf8);
+      border-radius: 50%;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 2px 6px rgba(192, 132, 252, 0.3);
+    }
+
+    .device-toggle-switch.mobile-active .knob {
+      transform: translateX(22px);
+    }
+
+    .device-toggle-hint {
+      text-align: center;
+      font-size: 0.7rem;
+      color: rgba(255, 255, 255, 0.15);
+      letter-spacing: 0.02em;
+    }
+
+    /* ── Features Strip ── */
+    .features-strip {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 2rem 2rem 4rem;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1px;
+      background: rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      overflow: hidden;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+
+    .feature-item {
+      background: rgba(10, 10, 15, 0.6);
+      padding: 1.5rem;
+      text-align: center;
+    }
+
+    .feature-item .icon {
+      font-size: 1.5rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .feature-item h4 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      margin-bottom: 0.25rem;
+    }
+
+    .feature-item p {
+      font-size: 0.75rem;
+      color: rgba(255, 255, 255, 0.35);
+      line-height: 1.4;
+    }
+
+    /* ── How It Works ── */
+    .how-it-works {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 0 2rem 5rem;
+      text-align: center;
+    }
+
+    .how-it-works h2 {
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
       margin-bottom: 0.75rem;
     }
 
-    .info-card p,
-    .info-card li {
+    .how-it-works > p {
+      color: rgba(255, 255, 255, 0.4);
+      font-size: 0.95rem;
+      margin-bottom: 3rem;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
+
+    .step-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 16px;
+      padding: 2rem;
+      text-align: left;
+      transition: border-color 0.3s, background 0.3s;
+    }
+
+    .step-card:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(192, 132, 252, 0.2);
+    }
+
+    .step-number {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, rgba(192, 132, 252, 0.15), rgba(129, 140, 248, 0.15));
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
       font-size: 0.85rem;
-      color: rgba(255, 255, 255, 0.7);
-      line-height: 1.6;
+      font-weight: 700;
+      color: #c084fc;
+      margin-bottom: 1rem;
     }
 
-    .info-card ul {
-      list-style: none;
-      padding: 0;
+    .step-card h3 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
     }
 
-    .info-card ul li::before {
-      content: "✓ ";
-      color: #4ade80;
-    }
-
-    .info-card code {
-      display: inline-block;
-      background: rgba(255, 255, 255, 0.1);
-      padding: 0.1em 0.4em;
-      border-radius: 4px;
+    .step-card p {
       font-size: 0.8rem;
-      color: #f9a8d4;
+      color: rgba(255, 255, 255, 0.4);
+      line-height: 1.5;
     }
 
-    .code-block {
-      background: rgba(0, 0, 0, 0.4);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      border-radius: 8px;
-      padding: 1rem;
-      font-family: "SF Mono", "Fira Code", monospace;
-      font-size: 0.8rem;
-      color: #a5f3fc;
-      overflow-x: auto;
-      white-space: pre;
-    }
-
-    .page-footer {
+    /* ── Footer ── */
+    footer {
+      position: relative;
+      z-index: 1;
       text-align: center;
       padding: 2rem;
-      color: rgba(255, 255, 255, 0.3);
-      font-size: 0.8rem;
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    footer p {
+      color: rgba(255, 255, 255, 0.2);
+      font-size: 0.75rem;
+      letter-spacing: 0.02em;
+    }
+
+    /* ── Animations ── */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(12px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 900px) {
+      .features-strip {
+        grid-template-columns: repeat(2, 1fr);
+      }
+      .steps {
+        grid-template-columns: 1fr;
+        max-width: 400px;
+        margin: 0 auto;
+      }
     }
 
     @media (max-width: 768px) {
-      .info-section {
-        grid-template-columns: 1fr;
+      nav {
+        padding: 0.75rem 1.25rem;
       }
-
-      virtual-try-on {
+      .nav-links {
+        display: none;
+      }
+      .mobile-menu-btn {
+        display: flex;
+      }
+      .mobile-menu-overlay {
+        display: flex;
+      }
+      .hero h1 {
+        font-size: 2.2rem;
+      }
+      .hero p {
+        font-size: 0.95rem;
+      }
+      .widget-container {
+        max-width: 100%;
+      }
+      virtual-try-on,
+      #tryon-placeholder {
         height: 500px;
+      }
+      .widget-container {
+        min-height: 500px;
+      }
+      .widget-section {
+        padding: 0 1rem 2rem;
+      }
+      .hero {
+        padding: 2.5rem 1.25rem 1.5rem;
+      }
+      .features-strip {
+        grid-template-columns: 1fr 1fr;
+        margin: 0 1rem;
+      }
+      .how-it-works {
+        padding: 0 1rem 3rem;
+      }
+      .feature-item {
+        padding: 1.25rem 1rem;
+      }
+      .trusted-bar {
+        gap: 1.25rem;
+        padding: 1.5rem 1rem 0.5rem;
+      }
+      .device-toggle {
+        display: none;
+      }
+      .device-toggle-hint {
+        display: none;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .features-strip {
+        grid-template-columns: 1fr;
         border-radius: 12px;
       }
-
-      .page-header h1 {
-        font-size: 1.3rem;
+      .hero h1 {
+        font-size: 1.8rem;
+      }
+      .hero-actions {
+        flex-direction: column;
+        width: 100%;
+      }
+      .btn-primary,
+      .btn-secondary {
+        width: 100%;
+        justify-content: center;
       }
     }
   </style>
 </head>
 <body>
 
-  <!-- ===== Header ===== -->
-  <header class="page-header">
-    <h1>💄 Virtual Makeup Try‑On</h1>
-    <p>Web Component integration — works with any framework</p>
-  </header>
+  <div class="grid-overlay"></div>
 
-  <!-- ===== The Widget (lazy start) ===== -->
-  <div class="widget-container" id="tryon-widget-container">
-    <!--
-      The <virtual-try-on> element is NOT present in the DOM initially.
-      Click the "Launch" button below to create it and start the try-on.
-    -->
-    <div id="tryon-placeholder">
-      <div class="placeholder-content">
-        <div class="placeholder-icon">📷</div>
-        <h2>Ready to Try On?</h2>
-        <p>Click the button below to launch the virtual makeup experience.</p>
-        <button id="launch-btn" class="launch-button">
-          <span class="btn-icon">✨</span>
-          Launch Virtual Try‑On
-        </button>
-        <p class="placeholder-note">Camera access will be requested after clicking.</p>
-      </div>
+  <!-- ===== Navigation ===== -->
+  <nav>
+    <div class="logo">
+      <div class="logo-icon">✦</div>
+      <span>VisIo</span>
     </div>
+    <ul class="nav-links">
+      <li><a href="#" onclick="scrollToWidget()">Product</a></li>
+      <li><a href="#" onclick="scrollToFeatures()">Features</a></li>
+      <li><a href="#" onclick="scrollToHow()">How it works</a></li>
+    </ul>
+    <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Open menu">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
+  </nav>
+
+  <!-- ===== Mobile Menu Overlay ===== -->
+  <div class="mobile-menu-overlay" id="mobile-menu-overlay">
+    <a href="#" onclick="closeMobileMenu(); scrollToWidget();">Product</a>
+    <a href="#" onclick="closeMobileMenu(); scrollToFeatures();">Features</a>
+    <a href="#" onclick="closeMobileMenu(); scrollToHow();">How it works</a>
   </div>
 
-  <!-- ===== Info Cards ===== -->
-  <section class="info-section">
-    <div class="info-card">
-      <h3>📦 How to use</h3>
-      <ol style="padding-left: 1.2rem; color: rgba(255,255,255,0.7); font-size: 0.85rem; line-height: 1.8;">
-        <li>Build the web component once: <br><code style="font-size:0.75rem;">npx vite build --config vite.lib.config.js</code></li>
-        <li>Include <code>dist/virtual-try-on.js</code> on your page</li>
-        <li>Place <code>&lt;virtual-try-on&gt;</code> anywhere in your HTML</li>
-        <li>That's it — no framework required, no extra setup</li>
-      </ol>
+  <!-- ===== Main ===== -->
+  <main>
+
+    <!-- ===== Hero ===== -->
+    <section class="hero">
+      <div class="hero-badge">✦ Now in beta</div>
+      <h1>
+        Virtual Makeup<br>
+        <span class="gradient">Try‑On, Reimagined</span>
+      </h1>
+      <p>
+        Real‑time AI‑powered makeup visualization. See foundation, blush,
+        lipstick and more on your face instantly — no swatches, no guesswork.
+      </p>
+      <div class="hero-actions">
+        <button id="launch-btn" class="btn-primary">
+          <span>✨</span>
+          Try It Now
+        </button>
+        <button class="btn-secondary" onclick="scrollToHow()">
+          <span>→</span>
+          See how it works
+        </button>
+      </div>
+    </section>
+
+    <!-- ===== Trusted Bar ===== -->
+    <div class="trusted-bar">
+      <span class="trusted-item"><span class="trusted-dot"></span> Real‑time face tracking</span>
+      <span class="trusted-item"><span class="trusted-dot"></span> Powered by MediaPipe</span>
+      <span class="trusted-item"><span class="trusted-dot"></span> 60+ foundation shades</span>
+      <span class="trusted-item"><span class="trusted-dot"></span> Works on any device</span>
     </div>
 
-    <div class="info-card">
-      <h3>✨ Features</h3>
-      <ul>
-        <li>Real-time face tracking via MediaPipe</li>
-        <li>Foundation, blush, lipstick, lip liner, gloss</li>
-        <li>Auto foundation shade matching</li>
-        <li>Skin smoothing (WASM)</li>
-        <li>Works on mobile & desktop</li>
-        <li>Zero CSS conflicts — fully encapsulated</li>
-      </ul>
+    <!-- ===== Widget Section ===== -->
+    <section class="widget-section" id="product-section">
+      <div class="widget-container" id="tryon-widget-container">
+        <div id="tryon-placeholder">
+          <div class="placeholder-content">
+            <div class="placeholder-icon-wrap">📷</div>
+            <h2>Ready to see yourself?</h2>
+            <p>Grant camera access to start the experience.</p>
+            <p class="placeholder-note">Camera access will be requested after clicking.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== Device Toggle ===== -->
+      <div class="device-toggle" id="device-toggle">
+        <span class="device-toggle-label active" id="label-desktop">💻 Desktop</span>
+        <div class="device-toggle-switch" id="device-switch">
+          <div class="knob"></div>
+        </div>
+        <span class="device-toggle-label" id="label-mobile">📱 Mobile</span>
+      </div>
+      <p class="device-toggle-hint">Toggle to preview the mobile view</p>
+    </section>
+
+    <!-- ===== Feature Badges Strip ===== -->
+    <div class="features-strip" id="features-section">
+      <div class="feature-item">
+        <div class="icon">🎨</div>
+        <h4>Foundation</h4>
+        <p>Auto shade matching with 60+ colors</p>
+      </div>
+      <div class="feature-item">
+        <div class="icon">🌸</div>
+        <h4>Blush & Bronzer</h4>
+        <p>Natural-looking glow, adjustable</p>
+      </div>
+      <div class="feature-item">
+        <div class="icon">💋</div>
+        <h4>Lipstick & Liner</h4>
+        <p>Precise lip mapping, multiple finishes</p>
+      </div>
+      <div class="feature-item">
+        <div class="icon">✨</div>
+        <h4>Skin Smoothing</h4>
+        <p>WASM‑powered real‑time enhancement</p>
+      </div>
     </div>
 
-    <div class="info-card">
-      <h3>🔧 Configuration via attributes</h3>
-      <div class="code-block">&lt;virtual-try-on
-  foundation-product-sku="212-66160"
-  blush-product-sku="212-15505"
-  lipstick-product-sku="212-12703"
-  lipliner-product-sku="212-519050"
-&gt;&lt;/virtual-try-on&gt;</div>
-    </div>
+    <!-- ===== How It Works ===== -->
+    <section class="how-it-works" id="how-section">
+      <h2>How It Works</h2>
+      <p>Three simple steps to your perfect look.</p>
+      <div class="steps">
+        <div class="step-card">
+          <div class="step-number">1</div>
+          <h3>Allow Camera Access</h3>
+          <p>Grant permission once — your video stays on your device and is never uploaded.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-number">2</div>
+          <h3>AI Detects Your Face</h3>
+          <p>MediaPipe maps 468 facial landmarks in real time for pixel‑perfect accuracy.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-number">3</div>
+          <h3>Try Any Product</h3>
+          <p>Apply foundation, blush, lipstick and more. Change shades instantly.</p>
+        </div>
+      </div>
+    </section>
 
-    <div class="info-card">
-      <h3>⚠️ Requirements</h3>
-      <ul>
-        <li>Page must be served over <strong>HTTPS</strong> (or localhost)</li>
-        <li>Browser must support <code>getUserMedia</code> (camera access)</li>
-        <li>Allow camera permission when prompted</li>
-        <li>The widget manages its own lifecycle — mount/unmount is automatic</li>
-      </ul>
-    </div>
-  </section>
+  </main>
 
   <!-- ===== Footer ===== -->
-  <footer class="page-footer">
-    Virtual Try‑On Web Component &mdash; Built with React 19, MediaPipe FaceMesh, Vite
+  <footer>
+    <p>Visio Virtual Try‑On &mdash; Built with React 19, MediaPipe FaceMesh & Vite</p>
   </footer>
 
-  <!-- ===== Lazy Launch Script ===== -->
+  <!-- ===== Script ===== -->
   <script>
+    // ── Device Toggle ──
+    (function() {
+      const widget = document.getElementById('tryon-widget-container');
+      const deviceSwitch = document.getElementById('device-switch');
+      const deviceToggle = document.getElementById('device-toggle');
+      const deviceHint = document.querySelector('.device-toggle-hint');
+      const labelDesktop = document.getElementById('label-desktop');
+      const labelMobile = document.getElementById('label-mobile');
+
+      if (!widget || !deviceSwitch || !deviceToggle) return;
+
+      let isMobile = false;
+
+      function updateToggleVisibility() {
+        const isNarrow = window.innerWidth <= 768;
+        deviceToggle.style.display = isNarrow ? 'none' : 'flex';
+        if (deviceHint) deviceHint.style.display = isNarrow ? 'none' : 'block';
+
+        if (isNarrow) {
+          widget.classList.add('mobile-view');
+        } else {
+          // Restore the user's preference when going back to desktop
+          if (!isMobile) {
+            widget.classList.remove('mobile-view');
+          }
+        }
+      }
+
+      deviceSwitch.addEventListener('click', function() {
+        isMobile = !isMobile;
+
+        if (isMobile) {
+          widget.classList.add('mobile-view');
+          deviceSwitch.classList.add('mobile-active');
+          labelDesktop.classList.remove('active');
+          labelMobile.classList.add('active');
+        } else {
+          widget.classList.remove('mobile-view');
+          deviceSwitch.classList.remove('mobile-active');
+          labelDesktop.classList.add('active');
+          labelMobile.classList.remove('active');
+        }
+      });
+
+      // Check on load and on resize
+      updateToggleVisibility();
+      window.addEventListener('resize', updateToggleVisibility);
+    })();
+
+    // ── Launch ──
     (function() {
       const launchBtn = document.getElementById('launch-btn');
       const placeholder = document.getElementById('tryon-placeholder');
@@ -355,27 +896,61 @@
       if (!launchBtn || !placeholder || !container) return;
 
       launchBtn.addEventListener('click', function onClick() {
-        // Disable button to prevent double clicks
         launchBtn.classList.add('loading');
-        launchBtn.textContent = 'Loading…';
+        launchBtn.innerHTML = '<span>⏳</span> Loading…';
 
-        // 1. Hide the placeholder
         placeholder.classList.add('hidden');
 
-        // 2. Create the <virtual-try-on> element with the same attributes.
-        //    The custom element is already registered (script in <head>),
-        //    so appending it triggers connectedCallback which loads MediaPipe,
-        //    mounts React, and requests camera access.
+        scrollToWidget();
+
         const el = document.createElement('virtual-try-on');
         el.setAttribute('foundation-product-sku', '212-66160');
         el.setAttribute('blush-product-sku', '212-15505');
         el.setAttribute('lipstick-product-sku', '212-12703');
         el.setAttribute('lipliner-product-sku', '212-519050');
-
-        // 3. Append to the container — connectedCallback fires now
         container.appendChild(el);
       });
     })();
+
+    // ── Mobile Menu ──
+    const mobileBtn = document.getElementById('mobile-menu-btn');
+    const mobileOverlay = document.getElementById('mobile-menu-overlay');
+
+    if (mobileBtn && mobileOverlay) {
+      mobileBtn.addEventListener('click', function() {
+        mobileOverlay.classList.add('open');
+        document.body.style.overflow = 'hidden';
+      });
+
+      mobileOverlay.addEventListener('click', function(e) {
+        if (e.target === mobileOverlay) {
+          closeMobileMenu();
+        }
+      });
+    }
+
+    function closeMobileMenu() {
+      if (mobileOverlay) {
+        mobileOverlay.classList.remove('open');
+        document.body.style.overflow = '';
+      }
+    }
+
+    // ── Smooth Scroll ──
+    function scrollToWidget() {
+      closeMobileMenu();
+      document.getElementById('product-section').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function scrollToFeatures() {
+      closeMobileMenu();
+      document.getElementById('features-section').scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function scrollToHow() {
+      closeMobileMenu();
+      document.getElementById('how-section').scrollIntoView({ behavior: 'smooth' });
+    }
   </script>
 
 </body>
