@@ -1271,7 +1271,6 @@ function App({ foundationProductSku, blushProductSku, lipstickProductSku, liplin
     );
   }
 
-  // ───── Десктопні контроли ─────
   const controlsContent = (
     <>
       <h3 className="text-2xl font-bold text-center text-pink-300">Virtual Makeover</h3>
