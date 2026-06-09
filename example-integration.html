@@ -125,6 +125,12 @@
       gap: 1.25rem;
     }
 
+    .nav-controls {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
     .theme-toggle {
       display: flex;
       align-items: center;
@@ -1036,6 +1042,8 @@
         <li><a href="#" onclick="scrollToFeatures()">Features</a></li>
         <li><a href="#" onclick="scrollToHow()">How it works</a></li>
       </ul>
+    </div>
+    <div class="nav-controls">
       <!-- Theme Toggle -->
       <div class="theme-toggle" id="theme-toggle" title="Toggle light / dark theme">
         <span class="theme-toggle-icon active" id="icon-dark">🌙</span>
@@ -1044,12 +1052,12 @@
         </div>
         <span class="theme-toggle-icon" id="icon-light">☀️</span>
       </div>
+      <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Open menu">
+        <span></span>
+        <span></span>
+        <span></span>
+      </button>
     </div>
-    <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Open menu">
-      <span></span>
-      <span></span>
-      <span></span>
-    </button>
   </nav>
 
   <!-- ===== Mobile Menu Overlay ===== -->
