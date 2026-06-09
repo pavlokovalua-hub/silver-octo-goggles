@@ -13,8 +13,10 @@
     }
 
     html {
-      overflow-x: hidden;
+      overflow-x: clip;
       min-height: 100%;
+      width: 100%;
+      max-width: 100%;
     }
 
     body {
@@ -23,7 +25,9 @@
       background: #0a0a0f;
       color: #fff;
       min-height: 100vh;
-      overflow-x: hidden;
+      overflow-x: clip;
+      width: 100%;
+      max-width: 100%;
       transition: background 0.4s ease, color 0.4s ease;
     }
 
@@ -1009,6 +1013,39 @@
       }
       .device-toggle-hint {
         display: none;
+      }
+    }
+
+    @media (max-width: 767px) {
+      main {
+        width: 100%;
+        max-width: 100%;
+        padding-left: 0;
+        padding-right: 0;
+      }
+      section, .trusted-bar, .features-strip, .how-it-works {
+        width: 100%;
+        max-width: 100%;
+        box-sizing: border-box;
+      }
+      .hero {
+        padding-left: 1.25rem;
+        padding-right: 1.25rem;
+      }
+      .widget-section {
+        padding-left: 0;
+        padding-right: 0;
+      }
+      .widget-container {
+        border-radius: 0;
+      }
+      virtual-try-on,
+      #tryon-placeholder {
+        border-radius: 0;
+      }
+      footer {
+        padding-left: 1.25rem;
+        padding-right: 1.25rem;
       }
     }
 
