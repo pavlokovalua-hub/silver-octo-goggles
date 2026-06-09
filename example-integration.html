@@ -19,6 +19,7 @@
       color: #fff;
       min-height: 100vh;
       overflow-x: hidden;
+      transition: background 0.4s ease, color 0.4s ease;
     }
 
     /* ── Background Effects ── */
@@ -35,6 +36,7 @@
         radial-gradient(ellipse 400px 600px at 50% 0%, rgba(249, 168, 212, 0.05) 0%, transparent 60%);
       pointer-events: none;
       z-index: 0;
+      transition: background 0.4s ease;
     }
 
     /* ── Grid overlay ── */
@@ -47,6 +49,7 @@
       background-size: 60px 60px;
       pointer-events: none;
       z-index: 0;
+      transition: background-image 0.4s ease;
     }
 
     /* ── Navigation ── */
@@ -64,6 +67,7 @@
       backdrop-filter: blur(20px) saturate(1.2);
       -webkit-backdrop-filter: blur(20px) saturate(1.2);
       border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+      transition: background 0.4s ease, border-color 0.4s ease;
     }
 
     .logo {
@@ -84,6 +88,7 @@
       align-items: center;
       justify-content: center;
       font-size: 0.9rem;
+      transition: background 0.4s ease;
     }
 
     .logo span {
@@ -91,6 +96,7 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
+      transition: background 0.4s ease;
     }
 
     .nav-links {
@@ -110,6 +116,67 @@
 
     .nav-links a:hover {
       color: rgba(255, 255, 255, 0.9);
+    }
+
+    /* ── Theme Toggle ── */
+    .nav-right {
+      display: flex;
+      align-items: center;
+      gap: 1.25rem;
+    }
+
+    .theme-toggle {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .theme-toggle-icon {
+      font-size: 0.9rem;
+      line-height: 1;
+      opacity: 0.5;
+      transition: opacity 0.3s ease, transform 0.3s ease;
+    }
+
+    .theme-toggle-icon.active {
+      opacity: 1;
+      transform: scale(1.15);
+    }
+
+    .theme-toggle-switch {
+      position: relative;
+      width: 40px;
+      height: 22px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 100px;
+      cursor: pointer;
+      transition: background 0.3s ease, border-color 0.3s ease;
+      flex-shrink: 0;
+    }
+
+    .theme-toggle-switch:hover {
+      background: rgba(255, 255, 255, 0.15);
+    }
+
+    .theme-toggle-switch .knob {
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 16px;
+      height: 16px;
+      background: linear-gradient(135deg, #c084fc, #818cf8);
+      border-radius: 50%;
+      transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), background 0.4s ease;
+      box-shadow: 0 2px 6px rgba(192, 132, 252, 0.3);
+    }
+
+    .theme-toggle-switch.light-active .knob {
+      transform: translateX(18px);
+      background: linear-gradient(135deg, #22c55e, #3b82f6);
+      box-shadow: 0 2px 6px rgba(34, 197, 94, 0.3);
     }
 
     /* ── Main Layout ── */
@@ -141,6 +208,7 @@
       border: 1px solid rgba(192, 132, 252, 0.2);
       border-radius: 100px;
       margin-bottom: 1.5rem;
+      transition: background 0.4s ease, border-color 0.4s ease, color 0.4s ease;
     }
 
     .hero h1 {
@@ -156,6 +224,7 @@
       -webkit-background-clip: text;
       -webkit-text-fill-color: transparent;
       background-clip: text;
+      transition: background 0.4s ease;
     }
 
     .hero p {
@@ -164,6 +233,7 @@
       line-height: 1.7;
       max-width: 520px;
       margin: 0 auto 2rem;
+      transition: color 0.4s ease;
     }
 
     /* ── CTA Buttons ── */
@@ -217,7 +287,7 @@
       border: 1px solid rgba(255, 255, 255, 0.1);
       border-radius: 12px;
       cursor: pointer;
-      transition: background 0.2s, border-color 0.2s;
+      transition: background 0.2s, border-color 0.2s, color 0.4s ease;
     }
 
     .btn-secondary:hover {
@@ -243,6 +313,7 @@
       color: rgba(255, 255, 255, 0.25);
       font-weight: 500;
       letter-spacing: 0.02em;
+      transition: color 0.4s ease;
     }
 
     .trusted-dot {
@@ -250,6 +321,7 @@
       height: 6px;
       border-radius: 50%;
       background: #4ade80;
+      transition: background 0.4s ease;
     }
 
     /* ── Mobile Hamburger ── */
@@ -269,7 +341,7 @@
       height: 2px;
       background: rgba(255, 255, 255, 0.6);
       border-radius: 2px;
-      transition: transform 0.3s, opacity 0.3s;
+      transition: transform 0.3s, opacity 0.3s, background 0.4s ease;
     }
 
     .mobile-menu-overlay {
@@ -285,7 +357,7 @@
       justify-content: center;
       gap: 2rem;
       opacity: 0;
-      transition: opacity 0.3s;
+      transition: opacity 0.3s, background 0.4s ease;
       pointer-events: none;
     }
 
@@ -336,6 +408,7 @@
       height: 500px;
       background: radial-gradient(circle, rgba(192, 132, 252, 0.12) 0%, transparent 70%);
       pointer-events: none;
+      transition: background 0.4s ease;
     }
 
     virtual-try-on {
@@ -348,6 +421,7 @@
         0 0 60px rgba(192, 132, 252, 0.1),
         0 30px 80px rgba(0, 0, 0, 0.6);
       position: relative;
+      transition: box-shadow 0.4s ease;
     }
 
     /* ── Placeholder ── */
@@ -366,6 +440,7 @@
       border: 1px solid rgba(255, 255, 255, 0.06);
       border-radius: 20px;
       position: relative;
+      transition: background 0.4s ease, border-color 0.4s ease;
     }
 
     .placeholder-content {
@@ -385,6 +460,7 @@
       align-items: center;
       justify-content: center;
       font-size: 2rem;
+      transition: background 0.4s ease, border-color 0.4s ease;
     }
 
     .placeholder-content h2 {
@@ -398,6 +474,7 @@
       color: rgba(255, 255, 255, 0.4);
       font-size: 0.9rem;
       margin-bottom: 1.75rem;
+      transition: color 0.4s ease;
     }
 
     .placeholder-note {
@@ -472,6 +549,7 @@
       font-size: 0.7rem;
       color: rgba(255, 255, 255, 0.15);
       letter-spacing: 0.02em;
+      transition: color 0.4s ease;
     }
 
     /* ── Features Strip ── */
@@ -486,12 +564,14 @@
       border-radius: 16px;
       overflow: hidden;
       border: 1px solid rgba(255, 255, 255, 0.06);
+      transition: background 0.4s ease, border-color 0.4s ease;
     }
 
     .feature-item {
       background: rgba(10, 10, 15, 0.6);
       padding: 1.5rem;
       text-align: center;
+      transition: background 0.4s ease;
     }
 
     .feature-item .icon {
@@ -509,6 +589,7 @@
       font-size: 0.75rem;
       color: rgba(255, 255, 255, 0.35);
       line-height: 1.4;
+      transition: color 0.4s ease;
     }
 
     /* ── How It Works ── */
@@ -530,6 +611,7 @@
       color: rgba(255, 255, 255, 0.4);
       font-size: 0.95rem;
       margin-bottom: 3rem;
+      transition: color 0.4s ease;
     }
 
     .steps {
@@ -544,7 +626,7 @@
       border-radius: 16px;
       padding: 2rem;
       text-align: left;
-      transition: border-color 0.3s, background 0.3s;
+      transition: border-color 0.3s, background 0.3s, color 0.4s ease;
     }
 
     .step-card:hover {
@@ -565,6 +647,7 @@
       font-weight: 700;
       color: #c084fc;
       margin-bottom: 1rem;
+      transition: background 0.4s ease, border-color 0.4s ease, color 0.4s ease;
     }
 
     .step-card h3 {
@@ -577,6 +660,7 @@
       font-size: 0.8rem;
       color: rgba(255, 255, 255, 0.4);
       line-height: 1.5;
+      transition: color 0.4s ease;
     }
 
     /* ── Footer ── */
@@ -586,12 +670,14 @@
       text-align: center;
       padding: 2rem;
       border-top: 1px solid rgba(255, 255, 255, 0.04);
+      transition: border-color 0.4s ease;
     }
 
     footer p {
       color: rgba(255, 255, 255, 0.2);
       font-size: 0.75rem;
       letter-spacing: 0.02em;
+      transition: color 0.4s ease;
     }
 
     /* ── Animations ── */
@@ -604,6 +690,246 @@
         opacity: 1;
         transform: translateY(0);
       }
+    }
+
+    /* ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── */
+    /* ──  LIGHT THEME  ── */
+    /* ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── ── */
+
+    body.light-theme {
+      background: #f5f5f7;
+      color: #1d1d1f;
+    }
+
+    /* Background effects */
+    body.light-theme::before {
+      background:
+        radial-gradient(ellipse 600px 400px at 20% 20%, rgba(34, 197, 94, 0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 500px 500px at 80% 80%, rgba(59, 130, 246, 0.05) 0%, transparent 60%),
+        radial-gradient(ellipse 400px 600px at 50% 0%, rgba(34, 197, 94, 0.03) 0%, transparent 60%);
+    }
+
+    body.light-theme .grid-overlay {
+      background-image:
+        linear-gradient(rgba(0, 0, 0, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 0, 0, 0.04) 1px, transparent 1px);
+    }
+
+    /* Navigation */
+    body.light-theme nav {
+      background: rgba(255, 255, 255, 0.75);
+      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+    }
+
+    body.light-theme .nav-links a {
+      color: rgba(0, 0, 0, 0.45);
+    }
+
+    body.light-theme .nav-links a:hover {
+      color: rgba(0, 0, 0, 0.8);
+    }
+
+    /* Logo — green-to-blue gradient in light mode */
+    body.light-theme .logo span {
+      background: linear-gradient(90deg, #22c55e, #3b82f6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    body.light-theme .logo-icon {
+      background: linear-gradient(135deg, #22c55e, #3b82f6);
+    }
+
+    /* Theme toggle in light mode */
+    body.light-theme .theme-toggle-icon {
+      opacity: 0.3;
+    }
+
+    body.light-theme .theme-toggle-icon.active {
+      opacity: 1;
+    }
+
+    body.light-theme .theme-toggle-switch {
+      background: #e8e8ed;
+      border-color: rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-theme .theme-toggle-switch:hover {
+      background: #dddde3;
+    }
+
+    body.light-theme .mobile-menu-btn span {
+      background: rgba(0, 0, 0, 0.5);
+    }
+
+    body.light-theme .mobile-menu-overlay {
+      background: rgba(245, 245, 247, 0.97);
+    }
+
+    body.light-theme .mobile-menu-overlay a {
+      color: rgba(0, 0, 0, 0.7);
+    }
+
+    body.light-theme .mobile-menu-overlay a:hover {
+      color: #22c55e;
+    }
+
+    /* Hero */
+    body.light-theme .hero-badge {
+      color: #3b82f6;
+      background: rgba(59, 130, 246, 0.08);
+      border-color: rgba(59, 130, 246, 0.18);
+    }
+
+    body.light-theme .hero h1 .gradient {
+      background: linear-gradient(90deg, #22c55e, #3b82f6);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    body.light-theme .hero p {
+      color: rgba(0, 0, 0, 0.45);
+    }
+
+    /* Buttons */
+    body.light-theme .btn-primary {
+      background: linear-gradient(135deg, #22c55e, #3b82f6);
+      box-shadow: 0 4px 24px rgba(34, 197, 94, 0.25);
+    }
+
+    body.light-theme .btn-primary:hover {
+      box-shadow: 0 8px 32px rgba(34, 197, 94, 0.4);
+    }
+
+    body.light-theme .btn-secondary {
+      color: rgba(0, 0, 0, 0.6);
+      background: rgba(0, 0, 0, 0.04);
+      border-color: rgba(0, 0, 0, 0.08);
+    }
+
+    body.light-theme .btn-secondary:hover {
+      background: rgba(0, 0, 0, 0.08);
+      border-color: rgba(0, 0, 0, 0.15);
+    }
+
+    /* Trusted bar */
+    body.light-theme .trusted-item {
+      color: rgba(0, 0, 0, 0.3);
+    }
+
+    body.light-theme .trusted-dot {
+      background: #22c55e;
+    }
+
+    /* Widget / Placeholder */
+    body.light-theme .widget-container::before {
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
+    }
+
+    body.light-theme virtual-try-on {
+      box-shadow:
+        0 0 40px rgba(59, 130, 246, 0.08),
+        0 20px 60px rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-theme #tryon-placeholder {
+      background: linear-gradient(
+        160deg,
+        rgba(255, 255, 255, 0.8) 0%,
+        rgba(34, 197, 94, 0.04) 50%,
+        rgba(59, 130, 246, 0.03) 100%
+      );
+      border-color: rgba(0, 0, 0, 0.06);
+    }
+
+    body.light-theme .placeholder-icon-wrap {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(59, 130, 246, 0.12));
+      border-color: rgba(0, 0, 0, 0.06);
+    }
+
+    body.light-theme .placeholder-content p {
+      color: rgba(0, 0, 0, 0.4);
+    }
+
+    body.light-theme .placeholder-note {
+      color: rgba(0, 0, 0, 0.25) !important;
+    }
+
+    /* Device toggle */
+    body.light-theme .device-toggle-label {
+      color: rgba(0, 0, 0, 0.3);
+    }
+
+    body.light-theme .device-toggle-label.active {
+      color: rgba(0, 0, 0, 0.75);
+    }
+
+    body.light-theme .device-toggle-switch {
+      background: rgba(0, 0, 0, 0.06);
+      border-color: rgba(0, 0, 0, 0.08);
+    }
+
+    body.light-theme .device-toggle-switch:hover {
+      background: rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-theme .device-toggle-switch .knob {
+      background: linear-gradient(135deg, #22c55e, #3b82f6);
+      box-shadow: 0 2px 6px rgba(34, 197, 94, 0.25);
+    }
+
+    body.light-theme .device-toggle-hint {
+      color: rgba(0, 0, 0, 0.15);
+    }
+
+    /* Features strip */
+    body.light-theme .features-strip {
+      background: rgba(0, 0, 0, 0.04);
+      border-color: rgba(0, 0, 0, 0.06);
+    }
+
+    body.light-theme .feature-item {
+      background: rgba(255, 255, 255, 0.85);
+    }
+
+    body.light-theme .feature-item p {
+      color: rgba(0, 0, 0, 0.4);
+    }
+
+    /* How it works */
+    body.light-theme .how-it-works > p {
+      color: rgba(0, 0, 0, 0.4);
+    }
+
+    body.light-theme .step-card {
+      background: rgba(255, 255, 255, 0.8);
+      border-color: rgba(0, 0, 0, 0.06);
+    }
+
+    body.light-theme .step-card:hover {
+      background: rgba(255, 255, 255, 0.95);
+      border-color: rgba(34, 197, 94, 0.2);
+    }
+
+    body.light-theme .step-number {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.12), rgba(59, 130, 246, 0.12));
+      border-color: rgba(0, 0, 0, 0.06);
+      color: #22c55e;
+    }
+
+    body.light-theme .step-card p {
+      color: rgba(0, 0, 0, 0.4);
+    }
+
+    /* Footer */
+    body.light-theme footer {
+      border-top-color: rgba(0, 0, 0, 0.04);
+    }
+
+    body.light-theme footer p {
+      color: rgba(0, 0, 0, 0.2);
     }
 
     /* ── Responsive ── */
@@ -704,11 +1030,21 @@
       <div class="logo-icon">✦</div>
       <span>VisIo</span>
     </div>
-    <ul class="nav-links">
-      <li><a href="#" onclick="scrollToWidget()">Product</a></li>
-      <li><a href="#" onclick="scrollToFeatures()">Features</a></li>
-      <li><a href="#" onclick="scrollToHow()">How it works</a></li>
-    </ul>
+    <div class="nav-right">
+      <ul class="nav-links">
+        <li><a href="#" onclick="scrollToWidget()">Product</a></li>
+        <li><a href="#" onclick="scrollToFeatures()">Features</a></li>
+        <li><a href="#" onclick="scrollToHow()">How it works</a></li>
+      </ul>
+      <!-- Theme Toggle -->
+      <div class="theme-toggle" id="theme-toggle" title="Toggle light / dark theme">
+        <span class="theme-toggle-icon active" id="icon-dark">🌙</span>
+        <div class="theme-toggle-switch" id="theme-switch">
+          <div class="knob"></div>
+        </div>
+        <span class="theme-toggle-icon" id="icon-light">☀️</span>
+      </div>
+    </div>
     <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Open menu">
       <span></span>
       <span></span>
@@ -837,6 +1173,35 @@
 
   <!-- ===== Script ===== -->
   <script>
+    // ── Theme Toggle ──
+    (function() {
+      const themeSwitch = document.getElementById('theme-switch');
+      const iconDark = document.getElementById('icon-dark');
+      const iconLight = document.getElementById('icon-light');
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      const saved = localStorage.getItem('visio-theme');
+
+      function setTheme(isLight) {
+        document.body.classList.toggle('light-theme', isLight);
+        themeSwitch.classList.toggle('light-active', isLight);
+        if (iconDark) iconDark.classList.toggle('active', !isLight);
+        if (iconLight) iconLight.classList.toggle('active', isLight);
+        localStorage.setItem('visio-theme', isLight ? 'light' : 'dark');
+      }
+
+      // Restore saved preference, or default to light
+      if (saved === 'dark') {
+        setTheme(false);
+      } else {
+        setTheme(true); // light is default
+      }
+
+      themeSwitch.addEventListener('click', function() {
+        const isLight = !document.body.classList.contains('light-theme');
+        setTheme(isLight);
+      });
+    })();
+
     // ── Device Toggle ──
     (function() {
       const widget = document.getElementById('tryon-widget-container');
