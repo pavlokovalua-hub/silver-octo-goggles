@@ -564,7 +564,73 @@
       transition: color 0.4s ease;
     }
 
+    /* ── Mode Toggle (Default / Single Product) ── */
+    .mode-toggle {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-top: 1rem;
+      margin-bottom: 0.5rem;
+    }
+
+    .mode-toggle-label {
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.35);
+      letter-spacing: 0.02em;
+      cursor: pointer;
+      user-select: none;
+      transition: color 0.25s;
+    }
+
+    .mode-toggle-label.active {
+      color: rgba(255, 255, 255, 0.85);
+    }
+
+    .mode-toggle-switch {
+      position: relative;
+      width: 48px;
+      height: 26px;
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 100px;
+      cursor: pointer;
+      transition: background 0.25s, border-color 0.25s;
+      flex-shrink: 0;
+    }
+
+    .mode-toggle-switch:hover {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.18);
+    }
+
+    .mode-toggle-switch .knob {
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 18px;
+      height: 18px;
+      background: linear-gradient(135deg, #c084fc, #818cf8);
+      border-radius: 50%;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      box-shadow: 0 2px 6px rgba(192, 132, 252, 0.3);
+    }
+
+    .mode-toggle-switch.single-active .knob {
+      transform: translateX(22px);
+    }
+
+    .mode-toggle-hint {
+      text-align: center;
+      font-size: 0.7rem;
+      color: rgba(255, 255, 255, 0.15);
+      letter-spacing: 0.02em;
+      transition: color 0.4s ease;
+    }
+
     /* ── Features Strip ── */
+
     .features-strip {
       max-width: 900px;
       margin: 0 auto;
@@ -896,7 +962,35 @@
       color: rgba(0, 0, 0, 0.15);
     }
 
+    /* Mode toggle (light theme) */
+    body.light-theme .mode-toggle-label {
+      color: rgba(0, 0, 0, 0.3);
+    }
+
+    body.light-theme .mode-toggle-label.active {
+      color: rgba(0, 0, 0, 0.75);
+    }
+
+    body.light-theme .mode-toggle-switch {
+      background: rgba(0, 0, 0, 0.06);
+      border-color: rgba(0, 0, 0, 0.08);
+    }
+
+    body.light-theme .mode-toggle-switch:hover {
+      background: rgba(0, 0, 0, 0.1);
+    }
+
+    body.light-theme .mode-toggle-switch .knob {
+      background: linear-gradient(135deg, #22c55e, #3b82f6);
+      box-shadow: 0 2px 6px rgba(34, 197, 94, 0.25);
+    }
+
+    body.light-theme .mode-toggle-hint {
+      color: rgba(0, 0, 0, 0.15);
+    }
+
     /* Features strip */
+
     body.light-theme .features-strip {
       background: rgba(0, 0, 0, 0.04);
       border-color: rgba(0, 0, 0, 0.06);
@@ -996,7 +1090,7 @@
       }
       .features-strip {
         grid-template-columns: 1fr 1fr;
-        margin: 0 1rem;
+        margin: 0 0rem;
       }
       .how-it-works {
         padding: 0 1rem 3rem;
@@ -1014,6 +1108,14 @@
       .device-toggle-hint {
         display: none;
       }
+      .mode-toggle {
+        display: flex;
+      }
+      .mode-toggle-hint {
+        display: block;
+      }
+
+
     }
 
     @media (max-width: 767px) {
@@ -1133,6 +1235,17 @@
           See how it works
         </button>
       </div>
+
+      <!-- ===== Mode Toggle (Default / Single Product) ===== -->
+      <div class="mode-toggle" id="mode-toggle">
+        <span class="mode-toggle-label active" id="label-default">🎨 Full Experience</span>
+        <div class="mode-toggle-switch" id="mode-switch">
+          <div class="knob"></div>
+        </div>
+        <span class="mode-toggle-label" id="label-single">🎯 Single Product</span>
+      </div>
+      <p class="mode-toggle-hint">Toggle to load the widget in single‑product preview mode (foundation SKU 212-66060)</p>
+
     </section>
 
     <!-- ===== Trusted Bar ===== -->
@@ -1298,30 +1411,98 @@
       window.addEventListener('resize', updateToggleVisibility);
     })();
 
-    // ── Launch ──
+    // ── Mode Toggle (Default / Single Product) ──
     (function() {
-      const launchBtn = document.getElementById('launch-btn');
-      const placeholder = document.getElementById('tryon-placeholder');
+      const modeSwitch = document.getElementById('mode-switch');
+      const labelDefault = document.getElementById('label-default');
+      const labelSingle = document.getElementById('label-single');
       const container = document.getElementById('tryon-widget-container');
+      const placeholder = document.getElementById('tryon-placeholder');
+      if (!modeSwitch || !labelDefault || !labelSingle || !container) return;
 
-      if (!launchBtn || !placeholder || !container) return;
+      // ── Helper: create and append the widget element ──
+      function createWidget(isSingle) {
+        // Remove existing widget if any
+        const existing = container.querySelector('virtual-try-on');
+        if (existing) existing.remove();
 
-      launchBtn.addEventListener('click', function onClick() {
-        launchBtn.classList.add('loading');
-        launchBtn.innerHTML = '<span>⏳</span> Loading…';
-
-        placeholder.classList.add('hidden');
-
-        scrollToWidget();
+        // Hide placeholder if visible
+        if (placeholder && !placeholder.classList.contains('hidden')) {
+          placeholder.classList.add('hidden');
+        }
 
         const el = document.createElement('virtual-try-on');
         el.setAttribute('foundation-product-sku', '212-66160');
         el.setAttribute('blush-product-sku', '212-15505');
         el.setAttribute('lipstick-product-sku', '212-12703');
         el.setAttribute('lipliner-product-sku', '212-519050');
+
+        if (isSingle) {
+          el.setAttribute('recomended-foundation-sku', '212-66060');
+        }
+
         container.appendChild(el);
+      }
+
+      // Expose for the launch button to use
+      window.__createTryOnWidget = createWidget;
+
+      // ── Is the widget already loaded? ──
+      function isWidgetLoaded() {
+        return container.querySelector('virtual-try-on') !== null;
+      }
+
+      let isSingleProduct = false;
+
+      modeSwitch.addEventListener('click', function() {
+        isSingleProduct = !isSingleProduct;
+
+        if (isSingleProduct) {
+          modeSwitch.classList.add('single-active');
+          labelDefault.classList.remove('active');
+          labelSingle.classList.add('active');
+        } else {
+          modeSwitch.classList.remove('single-active');
+          labelDefault.classList.add('active');
+          labelSingle.classList.remove('active');
+        }
+
+        // If widget is already loaded — re-initialise with new mode
+        if (isWidgetLoaded()) {
+          createWidget(isSingleProduct);
+        }
       });
     })();
+
+
+    // ── Launch ──
+    (function() {
+      const launchBtn = document.getElementById('launch-btn');
+      const placeholder = document.getElementById('tryon-placeholder');
+      const container = document.getElementById('tryon-widget-container');
+      const modeSwitch = document.getElementById('mode-switch');
+
+      if (!launchBtn || !placeholder || !container) return;
+
+      launchBtn.addEventListener('click', function onClick() {
+        // Prevent loading the widget multiple times
+        if (launchBtn.classList.contains('loading')) return;
+
+        launchBtn.classList.add('loading');
+        launchBtn.innerHTML = '<span>⏳</span> Loading…';
+
+        placeholder.classList.add('hidden');
+        scrollToWidget();
+
+        // Use the shared createWidget helper from the mode toggle module
+        if (window.__createTryOnWidget) {
+          const isSingle = modeSwitch && modeSwitch.classList.contains('single-active');
+          window.__createTryOnWidget(isSingle);
+        }
+      });
+    })();
+
+
 
     // ── Mobile Menu ──
     const mobileBtn = document.getElementById('mobile-menu-btn');
